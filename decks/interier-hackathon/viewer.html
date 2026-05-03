@@ -1,0 +1,1735 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Slide Viewer</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #111;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+
+    .viewer-container {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .nav-bar {
+      height: 48px;
+      background: #1a1a1a;
+      border-bottom: 1px solid #333;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      flex-shrink: 0;
+      z-index: 100;
+    }
+
+    .nav-bar button {
+      background: #333;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 6px 16px;
+      font-size: 13px;
+      font-family: inherit;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .nav-bar button:hover {
+      background: #555;
+    }
+
+    .nav-bar button:disabled {
+      opacity: 0.3;
+      cursor: default;
+    }
+
+    .slide-counter {
+      color: #aaa;
+      font-size: 14px;
+      font-weight: 500;
+      min-width: 60px;
+      text-align: center;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .btn-fullscreen {
+      position: absolute;
+      right: 16px;
+      background: transparent !important;
+      font-size: 18px;
+      padding: 6px 10px !important;
+    }
+
+    .slide-viewport {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .slide-scaler {
+      width: 720pt;
+      height: 405pt;
+      position: relative;
+      transform-origin: center center;
+    }
+
+    .slide-frame {
+      position: absolute;
+      inset: 0;
+      width: 720pt;
+      height: 405pt;
+      border: none;
+      overflow: hidden;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+    }
+
+    .slide-frame.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+  </style>
+</head>
+<body>
+  <div class="viewer-container">
+    <div class="nav-bar">
+      <button id="btn-prev" title="Previous (\u2190)">Prev</button>
+      <span class="slide-counter" id="counter">1 / 7</span>
+      <button id="btn-next" title="Next (\u2192)">Next</button>
+      <button class="btn-fullscreen" id="btn-fs" title="Fullscreen (F)">&#x26F6;</button>
+    </div>
+
+    <div class="slide-viewport" id="viewport">
+      <div class="slide-scaler" id="scaler">
+        <iframe class="slide-frame active" data-slide="1" srcdoc="<!DOCTYPE html>
+<html lang=&quot;ko&quot;>
+  <head>
+<base href=&quot;./&quot;>
+<script>
+(() => {
+  const slideFile = &quot;slide-01.html&quot;;
+  const localAssetPrefix = &quot;./assets/&quot;;
+  const absolutePathRe = /^(file:\/\/|\/Users\/|\/home\/|\/var\/|\/tmp\/|\/private\/|\/Volumes\/|[A-Za-z]:[\\/]|\\\\)/i;
+  const schemeRe = /^[a-z][a-z0-9+\-.]*:/i;
+  const prefix = '[slides-grab:image]';
+
+  function describeElement(element) {
+    if (!element || element.nodeType !== Node.ELEMENT_NODE) return '';
+    if (element === document.body) return 'body';
+
+    const parts = [];
+    let current = element;
+    while (current &amp;&amp; current.nodeType === Node.ELEMENT_NODE &amp;&amp; current !== document.body) {
+      let part = current.tagName.toLowerCase();
+      if (current.id) {
+        part += '#' + current.id;
+        parts.unshift(part);
+        break;
+      }
+      if (current.classList.length > 0) {
+        part += '.' + Array.from(current.classList).slice(0, 2).join('.');
+      }
+      parts.unshift(part);
+      current = current.parentElement;
+    }
+    return 'body > ' + parts.join(' > ');
+  }
+
+  function warn(message, detail) {
+    console.warn(prefix + ' ' + slideFile + ': ' + message, detail);
+  }
+
+  function fail(message, detail) {
+    console.error(prefix + ' ' + slideFile + ': ' + message, detail);
+  }
+
+  function validateAssetSource(kind, source, { allowEmpty = true, onNoncanonical = 'warn' } = {}) {
+    const value = (source || '').trim();
+    if (!value) {
+      return allowEmpty;
+    }
+    if (value.startsWith('data:')) {
+      return true;
+    }
+    if (value.startsWith('https://')) {
+      fail('remote ' + kind + ' URL is unsupported in saved slides; download it into ./assets/<file>', { src: value });
+      return false;
+    }
+    if (value.startsWith('http://')) {
+      fail('remote http:// ' + kind + ' URL is unsupported in saved slides; download it into ./assets/<file>', { src: value });
+      return false;
+    }
+    if (absolutePathRe.test(value) || value.startsWith('/')) {
+      fail('non-portable ' + kind + ' path is unsupported', { src: value });
+      return false;
+    }
+    if (schemeRe.test(value)) {
+      fail('unsupported ' + kind + ' URL scheme in saved slides; download it into ./assets/<file>', { src: value });
+      return false;
+    }
+    if (!value.startsWith(localAssetPrefix)) {
+      const report = onNoncanonical === 'fail' ? fail : warn;
+      report('noncanonical local ' + kind + ' path should use ./assets/<file>', { src: value });
+    }
+    return true;
+  }
+
+  function getVideoSources(video) {
+    const sources = [];
+    const directSrc = (video.getAttribute('src') || '').trim();
+    if (directSrc) {
+      sources.push(directSrc);
+    }
+    for (const source of video.querySelectorAll('source[src]')) {
+      const src = (source.getAttribute('src') || '').trim();
+      if (src) {
+        sources.push(src);
+      }
+    }
+    return sources;
+  }
+
+  window.addEventListener('error', (event) => {
+    const target = event.target;
+    if (target instanceof HTMLImageElement) {
+      const src = (target.getAttribute('src') || target.currentSrc || '').trim();
+      if (!src || src.startsWith('data:')) return;
+      if (src.startsWith(localAssetPrefix)) {
+        fail('missing local asset', { src });
+        return;
+      }
+      fail('image failed to load', { src });
+      return;
+    }
+
+    if (target instanceof HTMLVideoElement) {
+      const sources = getVideoSources(target);
+      if (sources.some((src) => src.startsWith(localAssetPrefix))) {
+        fail('missing local video asset', { sources });
+        return;
+      }
+      fail('video failed to load', { sources });
+      return;
+    }
+
+    if (target instanceof HTMLSourceElement &amp;&amp; target.parentElement instanceof HTMLVideoElement) {
+      const src = (target.getAttribute('src') || '').trim();
+      if (!src) return;
+      if (src.startsWith(localAssetPrefix)) {
+        fail('missing local video asset', { src });
+        return;
+      }
+      fail('video source failed to load', { src });
+    }
+  }, true);
+
+  window.addEventListener('DOMContentLoaded', () => {
+    for (const image of document.querySelectorAll('img[src]')) {
+      const src = (image.getAttribute('src') || '').trim();
+      validateAssetSource('image', src);
+    }
+
+    for (const video of document.querySelectorAll('video')) {
+      for (const src of getVideoSources(video)) {
+        validateAssetSource('video', src);
+      }
+
+      const poster = (video.getAttribute('poster') || '').trim();
+      if (poster) {
+        validateAssetSource('image', poster);
+      }
+    }
+
+    for (const element of document.body.querySelectorAll('*')) {
+      if (element === document.body) continue;
+      const backgroundImage = window.getComputedStyle(element).backgroundImage;
+      if (!backgroundImage || backgroundImage === 'none' || !backgroundImage.includes('url(')) continue;
+      fail('non-body background-image is not supported for slide content', {
+        element: describeElement(element),
+        backgroundImage,
+      });
+    }
+  });
+})();
+</script>
+    <meta charset=&quot;UTF-8&quot; />
+    <meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1.0&quot; />
+    <title>인테리어 견적 해독기</title>
+    <link rel=&quot;stylesheet&quot; href=&quot;./assets/theme.css&quot; />
+  </head>
+  <body>
+    <div class=&quot;slide&quot;>
+      <div class=&quot;topbar&quot;>
+        <div class=&quot;brand&quot;>
+          <div class=&quot;brand-mark&quot;></div>
+          <span>Interior Quote Decoder</span>
+        </div>
+        <div class=&quot;badge&quot;>Hackathon Demo</div>
+      </div>
+
+      <div class=&quot;hero-grid&quot;>
+        <div>
+          <div class=&quot;badge&quot;>Built From My Own Frustration</div>
+          <h1 class=&quot;main-title&quot;>내가 호구잡히는지 알고 싶어서 만들었습니다</h1>
+          <p class=&quot;subtitle&quot;>
+            제가 지금 직접 인테리어를 받아야 하는 상황에서,
+            &quot;이 자재값이 진짜 맞는지, 내가 지금 호구잡히고 있는 건 아닌지&quot;
+            알고 싶었습니다. 그래서 제 불편을 해결하려고, 견적을 읽고 검증하고
+            바로 질문할 수 있는 도구를 만들었습니다.
+          </p>
+        </div>
+
+        <div class=&quot;hero-stack&quot;>
+          <div class=&quot;quote-chip&quot;>
+            <div class=&quot;kicker&quot;>My Trigger</div>
+            <h3>이 자재값, 진짜 맞는 건가?</h3>
+            <p>견적서를 받아도 기준이 없으니 비싼지 싼지 판단할 수 없었습니다.</p>
+          </div>
+          <div class=&quot;quote-chip&quot;>
+            <div class=&quot;kicker&quot;>Product</div>
+            <div class=&quot;quote-value&quot;>4-Step Decision Tool</div>
+            <p>가격 계산, 단가 검증, 질문 생성, AI 분석을 한 화면에서 제공합니다.</p>
+          </div>
+          <div class=&quot;quote-chip&quot;>
+            <div class=&quot;kicker&quot;>Founder Quote</div>
+            <p>
+              &quot;나 호구잡히고 있는지 알고 싶다&quot;는 개인적인 불안에서 시작했습니다.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class=&quot;footer&quot;>
+        <span>정적 웹앱 · 모바일 우선 · 브라우저 기반</span>
+        <span>01</span>
+      </div>
+    </div>
+  </body>
+</html>
+" sandbox="allow-same-origin"></iframe>
+        <iframe class="slide-frame" data-slide="2" srcdoc="<!DOCTYPE html>
+<html lang=&quot;ko&quot;>
+  <head>
+<base href=&quot;./&quot;>
+<script>
+(() => {
+  const slideFile = &quot;slide-02.html&quot;;
+  const localAssetPrefix = &quot;./assets/&quot;;
+  const absolutePathRe = /^(file:\/\/|\/Users\/|\/home\/|\/var\/|\/tmp\/|\/private\/|\/Volumes\/|[A-Za-z]:[\\/]|\\\\)/i;
+  const schemeRe = /^[a-z][a-z0-9+\-.]*:/i;
+  const prefix = '[slides-grab:image]';
+
+  function describeElement(element) {
+    if (!element || element.nodeType !== Node.ELEMENT_NODE) return '';
+    if (element === document.body) return 'body';
+
+    const parts = [];
+    let current = element;
+    while (current &amp;&amp; current.nodeType === Node.ELEMENT_NODE &amp;&amp; current !== document.body) {
+      let part = current.tagName.toLowerCase();
+      if (current.id) {
+        part += '#' + current.id;
+        parts.unshift(part);
+        break;
+      }
+      if (current.classList.length > 0) {
+        part += '.' + Array.from(current.classList).slice(0, 2).join('.');
+      }
+      parts.unshift(part);
+      current = current.parentElement;
+    }
+    return 'body > ' + parts.join(' > ');
+  }
+
+  function warn(message, detail) {
+    console.warn(prefix + ' ' + slideFile + ': ' + message, detail);
+  }
+
+  function fail(message, detail) {
+    console.error(prefix + ' ' + slideFile + ': ' + message, detail);
+  }
+
+  function validateAssetSource(kind, source, { allowEmpty = true, onNoncanonical = 'warn' } = {}) {
+    const value = (source || '').trim();
+    if (!value) {
+      return allowEmpty;
+    }
+    if (value.startsWith('data:')) {
+      return true;
+    }
+    if (value.startsWith('https://')) {
+      fail('remote ' + kind + ' URL is unsupported in saved slides; download it into ./assets/<file>', { src: value });
+      return false;
+    }
+    if (value.startsWith('http://')) {
+      fail('remote http:// ' + kind + ' URL is unsupported in saved slides; download it into ./assets/<file>', { src: value });
+      return false;
+    }
+    if (absolutePathRe.test(value) || value.startsWith('/')) {
+      fail('non-portable ' + kind + ' path is unsupported', { src: value });
+      return false;
+    }
+    if (schemeRe.test(value)) {
+      fail('unsupported ' + kind + ' URL scheme in saved slides; download it into ./assets/<file>', { src: value });
+      return false;
+    }
+    if (!value.startsWith(localAssetPrefix)) {
+      const report = onNoncanonical === 'fail' ? fail : warn;
+      report('noncanonical local ' + kind + ' path should use ./assets/<file>', { src: value });
+    }
+    return true;
+  }
+
+  function getVideoSources(video) {
+    const sources = [];
+    const directSrc = (video.getAttribute('src') || '').trim();
+    if (directSrc) {
+      sources.push(directSrc);
+    }
+    for (const source of video.querySelectorAll('source[src]')) {
+      const src = (source.getAttribute('src') || '').trim();
+      if (src) {
+        sources.push(src);
+      }
+    }
+    return sources;
+  }
+
+  window.addEventListener('error', (event) => {
+    const target = event.target;
+    if (target instanceof HTMLImageElement) {
+      const src = (target.getAttribute('src') || target.currentSrc || '').trim();
+      if (!src || src.startsWith('data:')) return;
+      if (src.startsWith(localAssetPrefix)) {
+        fail('missing local asset', { src });
+        return;
+      }
+      fail('image failed to load', { src });
+      return;
+    }
+
+    if (target instanceof HTMLVideoElement) {
+      const sources = getVideoSources(target);
+      if (sources.some((src) => src.startsWith(localAssetPrefix))) {
+        fail('missing local video asset', { sources });
+        return;
+      }
+      fail('video failed to load', { sources });
+      return;
+    }
+
+    if (target instanceof HTMLSourceElement &amp;&amp; target.parentElement instanceof HTMLVideoElement) {
+      const src = (target.getAttribute('src') || '').trim();
+      if (!src) return;
+      if (src.startsWith(localAssetPrefix)) {
+        fail('missing local video asset', { src });
+        return;
+      }
+      fail('video source failed to load', { src });
+    }
+  }, true);
+
+  window.addEventListener('DOMContentLoaded', () => {
+    for (const image of document.querySelectorAll('img[src]')) {
+      const src = (image.getAttribute('src') || '').trim();
+      validateAssetSource('image', src);
+    }
+
+    for (const video of document.querySelectorAll('video')) {
+      for (const src of getVideoSources(video)) {
+        validateAssetSource('video', src);
+      }
+
+      const poster = (video.getAttribute('poster') || '').trim();
+      if (poster) {
+        validateAssetSource('image', poster);
+      }
+    }
+
+    for (const element of document.body.querySelectorAll('*')) {
+      if (element === document.body) continue;
+      const backgroundImage = window.getComputedStyle(element).backgroundImage;
+      if (!backgroundImage || backgroundImage === 'none' || !backgroundImage.includes('url(')) continue;
+      fail('non-body background-image is not supported for slide content', {
+        element: describeElement(element),
+        backgroundImage,
+      });
+    }
+  });
+})();
+</script>
+    <meta charset=&quot;UTF-8&quot; />
+    <meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1.0&quot; />
+    <title>문제 정의</title>
+    <link rel=&quot;stylesheet&quot; href=&quot;./assets/theme.css&quot; />
+  </head>
+  <body>
+    <div class=&quot;slide&quot;>
+      <div class=&quot;topbar&quot;>
+        <div>
+          <div class=&quot;badge&quot;>Problem</div>
+          <h2 class=&quot;section-title&quot;>왜 인테리어 견적은 받을수록 더 불안할까</h2>
+        </div>
+        <div class=&quot;page-no&quot;>02</div>
+      </div>
+
+      <div class=&quot;two-col&quot;>
+        <div class=&quot;panel&quot;>
+          <p class=&quot;section-copy&quot;>
+            인테리어를 실제로 알아보면서 가장 먼저 든 생각은
+            &quot;이 자재값이 진짜인지 모르겠다&quot;는 것이었습니다.
+            견적서에는 숫자는 많은데, 제가 정말 알고 싶은
+            &quot;적정 가격인지&quot;, &quot;묶여서 더 받는 건 아닌지&quot;, &quot;무엇을 따져 물어야 하는지&quot;는 보이지 않았습니다.
+          </p>
+          <ul class=&quot;bullet-list&quot;>
+            <li>총액만으로는 내가 비싸게 받고 있는지 판단이 안 됩니다.</li>
+            <li>&quot;일식&quot;, &quot;전체 포함&quot; 같은 표현은 어디서 돈이 붙는지 가립니다.</li>
+            <li>브랜드와 모델명이 없으면 자재값이 진짜인지 확인이 어렵습니다.</li>
+            <li>무엇을 물어봐야 할지 모르면 결국 협상도 못 합니다.</li>
+          </ul>
+        </div>
+
+        <div class=&quot;pain-grid&quot;>
+          <div class=&quot;mini-card&quot;>
+            <div class=&quot;kicker&quot;>Pain 1</div>
+            <h3>이 가격이 맞는지 모름</h3>
+            <p>
+              리모델링 견적이 예상보다 너무 많이 나와도,
+              이게 적정한지 과한지 바로 판단할 기준이 없습니다.
+            </p>
+          </div>
+          <div class=&quot;mini-card&quot;>
+            <div class=&quot;kicker&quot;>Pain 2</div>
+            <h3>호구잡히는 구조</h3>
+            <p>
+              철거, 창호, 목공이 한 덩어리면
+              어디서 더 받는지 보이지 않아 불안해집니다.
+            </p>
+          </div>
+          <div class=&quot;mini-card&quot;>
+            <div class=&quot;kicker&quot;>Pain 3</div>
+            <h3>질문을 못 함</h3>
+            <p>
+              무엇을 확인해야 하는지 모르면,
+              좋은 견적과 나쁜 견적을 구분할 수 없습니다.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class=&quot;footer&quot;>
+        <span>이 서비스는 시장 분석보다, 제 실제 불편에서 출발했습니다</span>
+        <span>02</span>
+      </div>
+    </div>
+  </body>
+</html>
+" sandbox="allow-same-origin"></iframe>
+        <iframe class="slide-frame" data-slide="3" srcdoc="<!DOCTYPE html>
+<html lang=&quot;ko&quot;>
+  <head>
+<base href=&quot;./&quot;>
+<script>
+(() => {
+  const slideFile = &quot;slide-03.html&quot;;
+  const localAssetPrefix = &quot;./assets/&quot;;
+  const absolutePathRe = /^(file:\/\/|\/Users\/|\/home\/|\/var\/|\/tmp\/|\/private\/|\/Volumes\/|[A-Za-z]:[\\/]|\\\\)/i;
+  const schemeRe = /^[a-z][a-z0-9+\-.]*:/i;
+  const prefix = '[slides-grab:image]';
+
+  function describeElement(element) {
+    if (!element || element.nodeType !== Node.ELEMENT_NODE) return '';
+    if (element === document.body) return 'body';
+
+    const parts = [];
+    let current = element;
+    while (current &amp;&amp; current.nodeType === Node.ELEMENT_NODE &amp;&amp; current !== document.body) {
+      let part = current.tagName.toLowerCase();
+      if (current.id) {
+        part += '#' + current.id;
+        parts.unshift(part);
+        break;
+      }
+      if (current.classList.length > 0) {
+        part += '.' + Array.from(current.classList).slice(0, 2).join('.');
+      }
+      parts.unshift(part);
+      current = current.parentElement;
+    }
+    return 'body > ' + parts.join(' > ');
+  }
+
+  function warn(message, detail) {
+    console.warn(prefix + ' ' + slideFile + ': ' + message, detail);
+  }
+
+  function fail(message, detail) {
+    console.error(prefix + ' ' + slideFile + ': ' + message, detail);
+  }
+
+  function validateAssetSource(kind, source, { allowEmpty = true, onNoncanonical = 'warn' } = {}) {
+    const value = (source || '').trim();
+    if (!value) {
+      return allowEmpty;
+    }
+    if (value.startsWith('data:')) {
+      return true;
+    }
+    if (value.startsWith('https://')) {
+      fail('remote ' + kind + ' URL is unsupported in saved slides; download it into ./assets/<file>', { src: value });
+      return false;
+    }
+    if (value.startsWith('http://')) {
+      fail('remote http:// ' + kind + ' URL is unsupported in saved slides; download it into ./assets/<file>', { src: value });
+      return false;
+    }
+    if (absolutePathRe.test(value) || value.startsWith('/')) {
+      fail('non-portable ' + kind + ' path is unsupported', { src: value });
+      return false;
+    }
+    if (schemeRe.test(value)) {
+      fail('unsupported ' + kind + ' URL scheme in saved slides; download it into ./assets/<file>', { src: value });
+      return false;
+    }
+    if (!value.startsWith(localAssetPrefix)) {
+      const report = onNoncanonical === 'fail' ? fail : warn;
+      report('noncanonical local ' + kind + ' path should use ./assets/<file>', { src: value });
+    }
+    return true;
+  }
+
+  function getVideoSources(video) {
+    const sources = [];
+    const directSrc = (video.getAttribute('src') || '').trim();
+    if (directSrc) {
+      sources.push(directSrc);
+    }
+    for (const source of video.querySelectorAll('source[src]')) {
+      const src = (source.getAttribute('src') || '').trim();
+      if (src) {
+        sources.push(src);
+      }
+    }
+    return sources;
+  }
+
+  window.addEventListener('error', (event) => {
+    const target = event.target;
+    if (target instanceof HTMLImageElement) {
+      const src = (target.getAttribute('src') || target.currentSrc || '').trim();
+      if (!src || src.startsWith('data:')) return;
+      if (src.startsWith(localAssetPrefix)) {
+        fail('missing local asset', { src });
+        return;
+      }
+      fail('image failed to load', { src });
+      return;
+    }
+
+    if (target instanceof HTMLVideoElement) {
+      const sources = getVideoSources(target);
+      if (sources.some((src) => src.startsWith(localAssetPrefix))) {
+        fail('missing local video asset', { sources });
+        return;
+      }
+      fail('video failed to load', { sources });
+      return;
+    }
+
+    if (target instanceof HTMLSourceElement &amp;&amp; target.parentElement instanceof HTMLVideoElement) {
+      const src = (target.getAttribute('src') || '').trim();
+      if (!src) return;
+      if (src.startsWith(localAssetPrefix)) {
+        fail('missing local video asset', { src });
+        return;
+      }
+      fail('video source failed to load', { src });
+    }
+  }, true);
+
+  window.addEventListener('DOMContentLoaded', () => {
+    for (const image of document.querySelectorAll('img[src]')) {
+      const src = (image.getAttribute('src') || '').trim();
+      validateAssetSource('image', src);
+    }
+
+    for (const video of document.querySelectorAll('video')) {
+      for (const src of getVideoSources(video)) {
+        validateAssetSource('video', src);
+      }
+
+      const poster = (video.getAttribute('poster') || '').trim();
+      if (poster) {
+        validateAssetSource('image', poster);
+      }
+    }
+
+    for (const element of document.body.querySelectorAll('*')) {
+      if (element === document.body) continue;
+      const backgroundImage = window.getComputedStyle(element).backgroundImage;
+      if (!backgroundImage || backgroundImage === 'none' || !backgroundImage.includes('url(')) continue;
+      fail('non-body background-image is not supported for slide content', {
+        element: describeElement(element),
+        backgroundImage,
+      });
+    }
+  });
+})();
+</script>
+    <meta charset=&quot;UTF-8&quot; />
+    <meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1.0&quot; />
+    <title>제품 흐름</title>
+    <link rel=&quot;stylesheet&quot; href=&quot;./assets/theme.css&quot; />
+  </head>
+  <body>
+    <div class=&quot;slide&quot;>
+      <div class=&quot;topbar&quot;>
+        <div>
+          <div class=&quot;badge&quot;>Solution Flow</div>
+          <h2 class=&quot;section-title&quot;>견적봄은 계약 전 확인을 4단계로 줄였습니다</h2>
+          <p class=&quot;section-copy&quot;>
+            계산에서 끝나지 않고, 미팅 행동으로 이어지도록 설계했습니다.
+          </p>
+        </div>
+        <div class=&quot;page-no&quot;>03</div>
+      </div>
+
+      <div class=&quot;flow-grid&quot;>
+        <div class=&quot;flow-card&quot;>
+          <div class=&quot;step-no&quot;>01</div>
+          <h3>평수 입력</h3>
+          <p>10평부터 60평까지 범위를 조정해 내 집 기준을 맞춥니다.</p>
+        </div>
+        <div class=&quot;flow-card&quot;>
+          <div class=&quot;step-no&quot;>02</div>
+          <h3>공정 선택</h3>
+          <p>15개 공정별로 보급형, 표준형, 고급형 자재 수준을 고릅니다.</p>
+        </div>
+        <div class=&quot;flow-card&quot;>
+          <div class=&quot;step-no&quot;>03</div>
+          <h3>단가 감사</h3>
+          <p>받은 평당 단가를 넣으면 선택 기준과 비교해 높음, 적정, 낮음을 판정합니다.</p>
+        </div>
+        <div class=&quot;flow-card&quot;>
+          <div class=&quot;step-no&quot;>04</div>
+          <h3>질문 생성</h3>
+          <p>공정별 확인 질문과 전체 체크리스트로 실제 미팅을 준비합니다.</p>
+        </div>
+      </div>
+
+      <div class=&quot;metrics-grid&quot;>
+        <div class=&quot;stat-card dark&quot;>
+          <p class=&quot;stat-title&quot;>Processes</p>
+          <div class=&quot;stat-value&quot;>15</div>
+          <p class=&quot;stat-caption&quot;>철거부터 일반관리까지 핵심 공정 커버</p>
+        </div>
+        <div class=&quot;stat-card&quot;>
+          <p class=&quot;stat-title&quot;>Grades</p>
+          <div class=&quot;stat-value&quot;>3</div>
+          <p class=&quot;stat-caption&quot;>보급형, 표준형, 고급형으로 빠른 판단</p>
+        </div>
+        <div class=&quot;stat-card&quot;>
+          <p class=&quot;stat-title&quot;>Outputs</p>
+          <div class=&quot;stat-value&quot;>4</div>
+          <p class=&quot;stat-caption&quot;>총액 범위, 단가 판정, 질문 목록, AI 리포트</p>
+        </div>
+        <div class=&quot;stat-card&quot;>
+          <p class=&quot;stat-title&quot;>Target</p>
+          <div class=&quot;stat-value&quot;>Mobile</div>
+          <p class=&quot;stat-caption&quot;>미팅 직전에도 바로 쓰는 브라우저 도구</p>
+        </div>
+      </div>
+
+      <div class=&quot;footer&quot;>
+        <span>단순 견적 계산기보다, 의사결정 퍼널에 가깝습니다</span>
+        <span>03</span>
+      </div>
+    </div>
+  </body>
+</html>
+" sandbox="allow-same-origin"></iframe>
+        <iframe class="slide-frame" data-slide="4" srcdoc="<!DOCTYPE html>
+<html lang=&quot;ko&quot;>
+  <head>
+<base href=&quot;./&quot;>
+<script>
+(() => {
+  const slideFile = &quot;slide-04.html&quot;;
+  const localAssetPrefix = &quot;./assets/&quot;;
+  const absolutePathRe = /^(file:\/\/|\/Users\/|\/home\/|\/var\/|\/tmp\/|\/private\/|\/Volumes\/|[A-Za-z]:[\\/]|\\\\)/i;
+  const schemeRe = /^[a-z][a-z0-9+\-.]*:/i;
+  const prefix = '[slides-grab:image]';
+
+  function describeElement(element) {
+    if (!element || element.nodeType !== Node.ELEMENT_NODE) return '';
+    if (element === document.body) return 'body';
+
+    const parts = [];
+    let current = element;
+    while (current &amp;&amp; current.nodeType === Node.ELEMENT_NODE &amp;&amp; current !== document.body) {
+      let part = current.tagName.toLowerCase();
+      if (current.id) {
+        part += '#' + current.id;
+        parts.unshift(part);
+        break;
+      }
+      if (current.classList.length > 0) {
+        part += '.' + Array.from(current.classList).slice(0, 2).join('.');
+      }
+      parts.unshift(part);
+      current = current.parentElement;
+    }
+    return 'body > ' + parts.join(' > ');
+  }
+
+  function warn(message, detail) {
+    console.warn(prefix + ' ' + slideFile + ': ' + message, detail);
+  }
+
+  function fail(message, detail) {
+    console.error(prefix + ' ' + slideFile + ': ' + message, detail);
+  }
+
+  function validateAssetSource(kind, source, { allowEmpty = true, onNoncanonical = 'warn' } = {}) {
+    const value = (source || '').trim();
+    if (!value) {
+      return allowEmpty;
+    }
+    if (value.startsWith('data:')) {
+      return true;
+    }
+    if (value.startsWith('https://')) {
+      fail('remote ' + kind + ' URL is unsupported in saved slides; download it into ./assets/<file>', { src: value });
+      return false;
+    }
+    if (value.startsWith('http://')) {
+      fail('remote http:// ' + kind + ' URL is unsupported in saved slides; download it into ./assets/<file>', { src: value });
+      return false;
+    }
+    if (absolutePathRe.test(value) || value.startsWith('/')) {
+      fail('non-portable ' + kind + ' path is unsupported', { src: value });
+      return false;
+    }
+    if (schemeRe.test(value)) {
+      fail('unsupported ' + kind + ' URL scheme in saved slides; download it into ./assets/<file>', { src: value });
+      return false;
+    }
+    if (!value.startsWith(localAssetPrefix)) {
+      const report = onNoncanonical === 'fail' ? fail : warn;
+      report('noncanonical local ' + kind + ' path should use ./assets/<file>', { src: value });
+    }
+    return true;
+  }
+
+  function getVideoSources(video) {
+    const sources = [];
+    const directSrc = (video.getAttribute('src') || '').trim();
+    if (directSrc) {
+      sources.push(directSrc);
+    }
+    for (const source of video.querySelectorAll('source[src]')) {
+      const src = (source.getAttribute('src') || '').trim();
+      if (src) {
+        sources.push(src);
+      }
+    }
+    return sources;
+  }
+
+  window.addEventListener('error', (event) => {
+    const target = event.target;
+    if (target instanceof HTMLImageElement) {
+      const src = (target.getAttribute('src') || target.currentSrc || '').trim();
+      if (!src || src.startsWith('data:')) return;
+      if (src.startsWith(localAssetPrefix)) {
+        fail('missing local asset', { src });
+        return;
+      }
+      fail('image failed to load', { src });
+      return;
+    }
+
+    if (target instanceof HTMLVideoElement) {
+      const sources = getVideoSources(target);
+      if (sources.some((src) => src.startsWith(localAssetPrefix))) {
+        fail('missing local video asset', { sources });
+        return;
+      }
+      fail('video failed to load', { sources });
+      return;
+    }
+
+    if (target instanceof HTMLSourceElement &amp;&amp; target.parentElement instanceof HTMLVideoElement) {
+      const src = (target.getAttribute('src') || '').trim();
+      if (!src) return;
+      if (src.startsWith(localAssetPrefix)) {
+        fail('missing local video asset', { src });
+        return;
+      }
+      fail('video source failed to load', { src });
+    }
+  }, true);
+
+  window.addEventListener('DOMContentLoaded', () => {
+    for (const image of document.querySelectorAll('img[src]')) {
+      const src = (image.getAttribute('src') || '').trim();
+      validateAssetSource('image', src);
+    }
+
+    for (const video of document.querySelectorAll('video')) {
+      for (const src of getVideoSources(video)) {
+        validateAssetSource('video', src);
+      }
+
+      const poster = (video.getAttribute('poster') || '').trim();
+      if (poster) {
+        validateAssetSource('image', poster);
+      }
+    }
+
+    for (const element of document.body.querySelectorAll('*')) {
+      if (element === document.body) continue;
+      const backgroundImage = window.getComputedStyle(element).backgroundImage;
+      if (!backgroundImage || backgroundImage === 'none' || !backgroundImage.includes('url(')) continue;
+      fail('non-body background-image is not supported for slide content', {
+        element: describeElement(element),
+        backgroundImage,
+      });
+    }
+  });
+})();
+</script>
+    <meta charset=&quot;UTF-8&quot; />
+    <meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1.0&quot; />
+    <title>데모 하이라이트</title>
+    <link rel=&quot;stylesheet&quot; href=&quot;./assets/theme.css&quot; />
+  </head>
+  <body>
+    <div class=&quot;slide&quot;>
+      <div class=&quot;topbar&quot;>
+        <div>
+          <div class=&quot;badge&quot;>Demo Highlights</div>
+          <h2 class=&quot;section-title&quot;>받은 견적이 적정한지, 한 화면에서 바로 봅니다</h2>
+        </div>
+        <div class=&quot;page-no&quot;>04</div>
+      </div>
+
+      <div class=&quot;demo-grid&quot;>
+        <div class=&quot;demo-window&quot;>
+          <div class=&quot;window-bar&quot;>
+            <div class=&quot;dot&quot;></div>
+            <div class=&quot;dot&quot;></div>
+            <div class=&quot;dot&quot;></div>
+          </div>
+          <div class=&quot;app-shell&quot;>
+            <div class=&quot;app-left&quot;>
+              <div class=&quot;ui-block&quot;>
+                <div class=&quot;ui-title&quot;>STEP 1 · 공정별 자재 선택 및 단가 검증</div>
+                <div class=&quot;proc-row&quot;><span>철거</span><span class=&quot;pill mid&quot;>표준형</span><span class=&quot;pill good&quot;>적정</span></div>
+                <div class=&quot;proc-row&quot;><span>창호</span><span class=&quot;pill mid&quot;>표준형</span><span class=&quot;pill warn&quot;>높음</span></div>
+                <div class=&quot;proc-row&quot;><span>목공</span><span class=&quot;pill mid&quot;>표준형</span><span class=&quot;pill warn&quot;>높음</span></div>
+                <div class=&quot;proc-row&quot;><span>타일</span><span class=&quot;pill mid&quot;>표준형</span><span class=&quot;pill good&quot;>적정</span></div>
+                <div class=&quot;proc-row&quot;><span>욕실</span><span class=&quot;pill mid&quot;>표준형</span><span class=&quot;pill good&quot;>적정</span></div>
+              </div>
+              <div class=&quot;ui-block&quot;>
+                <div class=&quot;ui-title&quot;>미팅 질문 목록</div>
+                <ul class=&quot;summary-list&quot;>
+                  <li>브랜드와 모델명을 항목별로 분리해 달라고 요청</li>
+                  <li>철거와 폐기물 처리 범위를 다시 확인</li>
+                </ul>
+              </div>
+            </div>
+            <div class=&quot;app-right&quot;>
+              <div class=&quot;ui-block&quot;>
+                <div class=&quot;ui-title&quot;>STEP 2 · 예상 결과</div>
+                <div class=&quot;big-range&quot;>6,200 ~ 7,600만원</div>
+                <p class=&quot;section-copy&quot;>33평 기준 참고 범위</p>
+              </div>
+              <div class=&quot;ui-block&quot;>
+                <div class=&quot;ui-title&quot;>총액 판정</div>
+                <div class=&quot;pill warn&quot;>비쌈</div>
+                <ul class=&quot;summary-list&quot;>
+                  <li>입력 총액이 예상보다 높게 나옴</li>
+                  <li>범위 상단 초과 가능성</li>
+                </ul>
+              </div>
+              <div class=&quot;ui-block&quot;>
+                <div class=&quot;ui-title&quot;>선택 요약</div>
+                <ul class=&quot;summary-list&quot;>
+                  <li>33평 기준</li>
+                  <li>표준형 중심</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class=&quot;panel&quot;>
+          <div class=&quot;kicker&quot;>Why this matters</div>
+          <h3>총액만 보지 않고, 공정 단위로 방어합니다</h3>
+          <ul class=&quot;bullet-list&quot;>
+            <li>견적 포함 여부를 공정별 토글로 제어합니다.</li>
+            <li>공정별 기준과 판정을 한 화면에 배치합니다.</li>
+            <li>총액 판단이 질문 목록으로 바로 이어집니다.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class=&quot;footer&quot;>
+        <span>평당 기준 데이터를 사용자 행동으로 번역하는 인터페이스</span>
+        <span>04</span>
+      </div>
+    </div>
+  </body>
+</html>
+" sandbox="allow-same-origin"></iframe>
+        <iframe class="slide-frame" data-slide="5" srcdoc="<!DOCTYPE html>
+<html lang=&quot;ko&quot;>
+  <head>
+<base href=&quot;./&quot;>
+<script>
+(() => {
+  const slideFile = &quot;slide-05.html&quot;;
+  const localAssetPrefix = &quot;./assets/&quot;;
+  const absolutePathRe = /^(file:\/\/|\/Users\/|\/home\/|\/var\/|\/tmp\/|\/private\/|\/Volumes\/|[A-Za-z]:[\\/]|\\\\)/i;
+  const schemeRe = /^[a-z][a-z0-9+\-.]*:/i;
+  const prefix = '[slides-grab:image]';
+
+  function describeElement(element) {
+    if (!element || element.nodeType !== Node.ELEMENT_NODE) return '';
+    if (element === document.body) return 'body';
+
+    const parts = [];
+    let current = element;
+    while (current &amp;&amp; current.nodeType === Node.ELEMENT_NODE &amp;&amp; current !== document.body) {
+      let part = current.tagName.toLowerCase();
+      if (current.id) {
+        part += '#' + current.id;
+        parts.unshift(part);
+        break;
+      }
+      if (current.classList.length > 0) {
+        part += '.' + Array.from(current.classList).slice(0, 2).join('.');
+      }
+      parts.unshift(part);
+      current = current.parentElement;
+    }
+    return 'body > ' + parts.join(' > ');
+  }
+
+  function warn(message, detail) {
+    console.warn(prefix + ' ' + slideFile + ': ' + message, detail);
+  }
+
+  function fail(message, detail) {
+    console.error(prefix + ' ' + slideFile + ': ' + message, detail);
+  }
+
+  function validateAssetSource(kind, source, { allowEmpty = true, onNoncanonical = 'warn' } = {}) {
+    const value = (source || '').trim();
+    if (!value) {
+      return allowEmpty;
+    }
+    if (value.startsWith('data:')) {
+      return true;
+    }
+    if (value.startsWith('https://')) {
+      fail('remote ' + kind + ' URL is unsupported in saved slides; download it into ./assets/<file>', { src: value });
+      return false;
+    }
+    if (value.startsWith('http://')) {
+      fail('remote http:// ' + kind + ' URL is unsupported in saved slides; download it into ./assets/<file>', { src: value });
+      return false;
+    }
+    if (absolutePathRe.test(value) || value.startsWith('/')) {
+      fail('non-portable ' + kind + ' path is unsupported', { src: value });
+      return false;
+    }
+    if (schemeRe.test(value)) {
+      fail('unsupported ' + kind + ' URL scheme in saved slides; download it into ./assets/<file>', { src: value });
+      return false;
+    }
+    if (!value.startsWith(localAssetPrefix)) {
+      const report = onNoncanonical === 'fail' ? fail : warn;
+      report('noncanonical local ' + kind + ' path should use ./assets/<file>', { src: value });
+    }
+    return true;
+  }
+
+  function getVideoSources(video) {
+    const sources = [];
+    const directSrc = (video.getAttribute('src') || '').trim();
+    if (directSrc) {
+      sources.push(directSrc);
+    }
+    for (const source of video.querySelectorAll('source[src]')) {
+      const src = (source.getAttribute('src') || '').trim();
+      if (src) {
+        sources.push(src);
+      }
+    }
+    return sources;
+  }
+
+  window.addEventListener('error', (event) => {
+    const target = event.target;
+    if (target instanceof HTMLImageElement) {
+      const src = (target.getAttribute('src') || target.currentSrc || '').trim();
+      if (!src || src.startsWith('data:')) return;
+      if (src.startsWith(localAssetPrefix)) {
+        fail('missing local asset', { src });
+        return;
+      }
+      fail('image failed to load', { src });
+      return;
+    }
+
+    if (target instanceof HTMLVideoElement) {
+      const sources = getVideoSources(target);
+      if (sources.some((src) => src.startsWith(localAssetPrefix))) {
+        fail('missing local video asset', { sources });
+        return;
+      }
+      fail('video failed to load', { sources });
+      return;
+    }
+
+    if (target instanceof HTMLSourceElement &amp;&amp; target.parentElement instanceof HTMLVideoElement) {
+      const src = (target.getAttribute('src') || '').trim();
+      if (!src) return;
+      if (src.startsWith(localAssetPrefix)) {
+        fail('missing local video asset', { src });
+        return;
+      }
+      fail('video source failed to load', { src });
+    }
+  }, true);
+
+  window.addEventListener('DOMContentLoaded', () => {
+    for (const image of document.querySelectorAll('img[src]')) {
+      const src = (image.getAttribute('src') || '').trim();
+      validateAssetSource('image', src);
+    }
+
+    for (const video of document.querySelectorAll('video')) {
+      for (const src of getVideoSources(video)) {
+        validateAssetSource('video', src);
+      }
+
+      const poster = (video.getAttribute('poster') || '').trim();
+      if (poster) {
+        validateAssetSource('image', poster);
+      }
+    }
+
+    for (const element of document.body.querySelectorAll('*')) {
+      if (element === document.body) continue;
+      const backgroundImage = window.getComputedStyle(element).backgroundImage;
+      if (!backgroundImage || backgroundImage === 'none' || !backgroundImage.includes('url(')) continue;
+      fail('non-body background-image is not supported for slide content', {
+        element: describeElement(element),
+        backgroundImage,
+      });
+    }
+  });
+})();
+</script>
+    <meta charset=&quot;UTF-8&quot; />
+    <meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1.0&quot; />
+    <title>AI Analyzer</title>
+    <link rel=&quot;stylesheet&quot; href=&quot;./assets/theme.css&quot; />
+  </head>
+  <body>
+    <div class=&quot;slide&quot;>
+      <div class=&quot;topbar&quot;>
+        <div>
+          <div class=&quot;badge&quot;>AI Analyzer</div>
+          <h2 class=&quot;section-title&quot;>견적서를 붙여넣으면, AI가 위험 신호를 바로 짚어줍니다</h2>
+          <p class=&quot;section-copy&quot;>
+            분석 결과는 요약이 아니라 협상 포인트 중심으로 설계했습니다.
+          </p>
+        </div>
+        <div class=&quot;page-no&quot;>05</div>
+      </div>
+
+      <div class=&quot;panel&quot; style=&quot;margin-top: 6pt;&quot;>
+        <div class=&quot;kicker&quot;>Input → Output</div>
+        <h3>견적서 원문을 붙여넣으면 협상 리포트로 바뀝니다</h3>
+        <p class=&quot;section-copy&quot;>
+          브랜드, 모델명, 수량이 보이는 텍스트를 넣으면 AI가 바로 협상 리포트로 정리합니다.
+        </p>
+
+        <div class=&quot;metrics-grid&quot; style=&quot;grid-template-columns: repeat(4, 1fr); margin-top: 10pt;&quot;>
+          <div class=&quot;risk-card&quot;>
+            <div class=&quot;risk-tag&quot;>01</div>
+            <h3>가격 이상</h3>
+            <p>기준 단가 대비 높은 항목 탐지</p>
+          </div>
+          <div class=&quot;risk-card&quot;>
+            <div class=&quot;risk-tag&quot;>02</div>
+            <h3>범위 모호</h3>
+            <p>묶음 표기를 질문 문장으로 변환</p>
+          </div>
+          <div class=&quot;risk-card&quot;>
+            <div class=&quot;risk-tag&quot;>03</div>
+            <h3>누락 항목</h3>
+            <p>빠진 비용 후보를 찾아줍니다</p>
+          </div>
+          <div class=&quot;risk-card&quot;>
+            <div class=&quot;risk-tag&quot;>04</div>
+            <h3>협상 포인트</h3>
+            <p>줄일 수 있는 비용 구간 제시</p>
+          </div>
+        </div>
+
+        <div class=&quot;metrics-grid&quot; style=&quot;grid-template-columns: repeat(2, 1fr); margin-top: 6pt;&quot;>
+          <div class=&quot;stat-card&quot;>
+            <p class=&quot;stat-title&quot;>Streaming UX</p>
+            <div class=&quot;stat-value&quot;>Live</div>
+            <p class=&quot;stat-caption&quot;>결과를 실시간 출력</p>
+          </div>
+          <div class=&quot;stat-card dark&quot;>
+            <p class=&quot;stat-title&quot;>Privacy</p>
+            <div class=&quot;stat-value&quot;>Local</div>
+            <p class=&quot;stat-caption&quot;>키는 브라우저에만 저장</p>
+          </div>
+        </div>
+      </div>
+
+      <div class=&quot;footer&quot;>
+        <span>AI는 요약기가 아니라, 소비자 협상 코파일럿 역할을 합니다</span>
+        <span>05</span>
+      </div>
+    </div>
+  </body>
+</html>
+" sandbox="allow-same-origin"></iframe>
+        <iframe class="slide-frame" data-slide="6" srcdoc="<!DOCTYPE html>
+<html lang=&quot;ko&quot;>
+  <head>
+<base href=&quot;./&quot;>
+<script>
+(() => {
+  const slideFile = &quot;slide-06.html&quot;;
+  const localAssetPrefix = &quot;./assets/&quot;;
+  const absolutePathRe = /^(file:\/\/|\/Users\/|\/home\/|\/var\/|\/tmp\/|\/private\/|\/Volumes\/|[A-Za-z]:[\\/]|\\\\)/i;
+  const schemeRe = /^[a-z][a-z0-9+\-.]*:/i;
+  const prefix = '[slides-grab:image]';
+
+  function describeElement(element) {
+    if (!element || element.nodeType !== Node.ELEMENT_NODE) return '';
+    if (element === document.body) return 'body';
+
+    const parts = [];
+    let current = element;
+    while (current &amp;&amp; current.nodeType === Node.ELEMENT_NODE &amp;&amp; current !== document.body) {
+      let part = current.tagName.toLowerCase();
+      if (current.id) {
+        part += '#' + current.id;
+        parts.unshift(part);
+        break;
+      }
+      if (current.classList.length > 0) {
+        part += '.' + Array.from(current.classList).slice(0, 2).join('.');
+      }
+      parts.unshift(part);
+      current = current.parentElement;
+    }
+    return 'body > ' + parts.join(' > ');
+  }
+
+  function warn(message, detail) {
+    console.warn(prefix + ' ' + slideFile + ': ' + message, detail);
+  }
+
+  function fail(message, detail) {
+    console.error(prefix + ' ' + slideFile + ': ' + message, detail);
+  }
+
+  function validateAssetSource(kind, source, { allowEmpty = true, onNoncanonical = 'warn' } = {}) {
+    const value = (source || '').trim();
+    if (!value) {
+      return allowEmpty;
+    }
+    if (value.startsWith('data:')) {
+      return true;
+    }
+    if (value.startsWith('https://')) {
+      fail('remote ' + kind + ' URL is unsupported in saved slides; download it into ./assets/<file>', { src: value });
+      return false;
+    }
+    if (value.startsWith('http://')) {
+      fail('remote http:// ' + kind + ' URL is unsupported in saved slides; download it into ./assets/<file>', { src: value });
+      return false;
+    }
+    if (absolutePathRe.test(value) || value.startsWith('/')) {
+      fail('non-portable ' + kind + ' path is unsupported', { src: value });
+      return false;
+    }
+    if (schemeRe.test(value)) {
+      fail('unsupported ' + kind + ' URL scheme in saved slides; download it into ./assets/<file>', { src: value });
+      return false;
+    }
+    if (!value.startsWith(localAssetPrefix)) {
+      const report = onNoncanonical === 'fail' ? fail : warn;
+      report('noncanonical local ' + kind + ' path should use ./assets/<file>', { src: value });
+    }
+    return true;
+  }
+
+  function getVideoSources(video) {
+    const sources = [];
+    const directSrc = (video.getAttribute('src') || '').trim();
+    if (directSrc) {
+      sources.push(directSrc);
+    }
+    for (const source of video.querySelectorAll('source[src]')) {
+      const src = (source.getAttribute('src') || '').trim();
+      if (src) {
+        sources.push(src);
+      }
+    }
+    return sources;
+  }
+
+  window.addEventListener('error', (event) => {
+    const target = event.target;
+    if (target instanceof HTMLImageElement) {
+      const src = (target.getAttribute('src') || target.currentSrc || '').trim();
+      if (!src || src.startsWith('data:')) return;
+      if (src.startsWith(localAssetPrefix)) {
+        fail('missing local asset', { src });
+        return;
+      }
+      fail('image failed to load', { src });
+      return;
+    }
+
+    if (target instanceof HTMLVideoElement) {
+      const sources = getVideoSources(target);
+      if (sources.some((src) => src.startsWith(localAssetPrefix))) {
+        fail('missing local video asset', { sources });
+        return;
+      }
+      fail('video failed to load', { sources });
+      return;
+    }
+
+    if (target instanceof HTMLSourceElement &amp;&amp; target.parentElement instanceof HTMLVideoElement) {
+      const src = (target.getAttribute('src') || '').trim();
+      if (!src) return;
+      if (src.startsWith(localAssetPrefix)) {
+        fail('missing local video asset', { src });
+        return;
+      }
+      fail('video source failed to load', { src });
+    }
+  }, true);
+
+  window.addEventListener('DOMContentLoaded', () => {
+    for (const image of document.querySelectorAll('img[src]')) {
+      const src = (image.getAttribute('src') || '').trim();
+      validateAssetSource('image', src);
+    }
+
+    for (const video of document.querySelectorAll('video')) {
+      for (const src of getVideoSources(video)) {
+        validateAssetSource('video', src);
+      }
+
+      const poster = (video.getAttribute('poster') || '').trim();
+      if (poster) {
+        validateAssetSource('image', poster);
+      }
+    }
+
+    for (const element of document.body.querySelectorAll('*')) {
+      if (element === document.body) continue;
+      const backgroundImage = window.getComputedStyle(element).backgroundImage;
+      if (!backgroundImage || backgroundImage === 'none' || !backgroundImage.includes('url(')) continue;
+      fail('non-body background-image is not supported for slide content', {
+        element: describeElement(element),
+        backgroundImage,
+      });
+    }
+  });
+})();
+</script>
+    <meta charset=&quot;UTF-8&quot; />
+    <meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1.0&quot; />
+    <title>차별점</title>
+    <link rel=&quot;stylesheet&quot; href=&quot;./assets/theme.css&quot; />
+  </head>
+  <body>
+    <div class=&quot;slide&quot;>
+      <div class=&quot;topbar&quot;>
+        <div>
+          <div class=&quot;badge&quot;>Why It Works</div>
+          <h2 class=&quot;section-title&quot;>왜 사람들은 견적봄을 실제로 쓰게 될까</h2>
+        </div>
+        <div class=&quot;page-no&quot;>06</div>
+      </div>
+
+      <div class=&quot;metrics-grid&quot; style=&quot;margin-top: 20pt;&quot;>
+        <div class=&quot;stat-card dark&quot;>
+          <p class=&quot;stat-title&quot;>Structured Data</p>
+          <div class=&quot;stat-value&quot;>15×3</div>
+          <p class=&quot;stat-caption&quot;>공정과 등급을 구조화해 기준 단가와 질문 템플릿을 연결</p>
+        </div>
+        <div class=&quot;stat-card&quot;>
+          <p class=&quot;stat-title&quot;>No Backend</p>
+          <div class=&quot;stat-value&quot;>Static</div>
+          <p class=&quot;stat-caption&quot;>HTML, CSS, JS만으로 빠르게 배포하고 접근 가능</p>
+        </div>
+        <div class=&quot;stat-card&quot;>
+          <p class=&quot;stat-title&quot;>Real Workflow</p>
+          <div class=&quot;stat-value&quot;>Meeting</div>
+          <p class=&quot;stat-caption&quot;>결과가 실제 질문과 체크리스트로 이어집니다</p>
+        </div>
+        <div class=&quot;stat-card&quot;>
+          <p class=&quot;stat-title&quot;>AI Layer</p>
+          <div class=&quot;stat-value&quot;>Risk</div>
+          <p class=&quot;stat-caption&quot;>가격 이상, 누락, 모호함, 협상 포인트를 함께 다룹니다</p>
+        </div>
+      </div>
+
+      <div class=&quot;two-col&quot; style=&quot;padding-top: 14pt;&quot;>
+        <div class=&quot;panel&quot;>
+          <div class=&quot;kicker&quot;>Technical summary</div>
+          <ul class=&quot;bullet-list&quot;>
+            <li>정적 프런트엔드 구조라 설치 없이 바로 열 수 있습니다.</li>
+            <li>가격 데이터와 질문 데이터가 `prices.js`에 구조화돼 있습니다.</li>
+            <li>판정 로직은 `grade-decoder.js`에서 총액과 공정 단위로 분리됩니다.</li>
+            <li>AI 분석은 스트리밍 기반이라 데모 전달력이 높습니다.</li>
+          </ul>
+        </div>
+
+        <div class=&quot;panel&quot;>
+          <div class=&quot;kicker&quot;>Product summary</div>
+          <ul class=&quot;bullet-list&quot;>
+            <li>막연한 불안감을 숫자와 질문으로 바꿉니다.</li>
+            <li>좋은 견적서와 나쁜 견적서를 비교 가능한 형태로 만듭니다.</li>
+            <li>사용자는 견적을 &quot;받는 사람&quot;에서 &quot;판단하는 사람&quot;으로 바뀝니다.</li>
+            <li>향후 사진 분석, 대화형 추천과도 자연스럽게 확장됩니다.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class=&quot;footer&quot;>
+        <span>제품 구조와 발표 메시지가 같은 방향을 가리키도록 설계</span>
+        <span>06</span>
+      </div>
+    </div>
+  </body>
+</html>
+" sandbox="allow-same-origin"></iframe>
+        <iframe class="slide-frame" data-slide="7" srcdoc="<!DOCTYPE html>
+<html lang=&quot;ko&quot;>
+  <head>
+<base href=&quot;./&quot;>
+<script>
+(() => {
+  const slideFile = &quot;slide-07.html&quot;;
+  const localAssetPrefix = &quot;./assets/&quot;;
+  const absolutePathRe = /^(file:\/\/|\/Users\/|\/home\/|\/var\/|\/tmp\/|\/private\/|\/Volumes\/|[A-Za-z]:[\\/]|\\\\)/i;
+  const schemeRe = /^[a-z][a-z0-9+\-.]*:/i;
+  const prefix = '[slides-grab:image]';
+
+  function describeElement(element) {
+    if (!element || element.nodeType !== Node.ELEMENT_NODE) return '';
+    if (element === document.body) return 'body';
+
+    const parts = [];
+    let current = element;
+    while (current &amp;&amp; current.nodeType === Node.ELEMENT_NODE &amp;&amp; current !== document.body) {
+      let part = current.tagName.toLowerCase();
+      if (current.id) {
+        part += '#' + current.id;
+        parts.unshift(part);
+        break;
+      }
+      if (current.classList.length > 0) {
+        part += '.' + Array.from(current.classList).slice(0, 2).join('.');
+      }
+      parts.unshift(part);
+      current = current.parentElement;
+    }
+    return 'body > ' + parts.join(' > ');
+  }
+
+  function warn(message, detail) {
+    console.warn(prefix + ' ' + slideFile + ': ' + message, detail);
+  }
+
+  function fail(message, detail) {
+    console.error(prefix + ' ' + slideFile + ': ' + message, detail);
+  }
+
+  function validateAssetSource(kind, source, { allowEmpty = true, onNoncanonical = 'warn' } = {}) {
+    const value = (source || '').trim();
+    if (!value) {
+      return allowEmpty;
+    }
+    if (value.startsWith('data:')) {
+      return true;
+    }
+    if (value.startsWith('https://')) {
+      fail('remote ' + kind + ' URL is unsupported in saved slides; download it into ./assets/<file>', { src: value });
+      return false;
+    }
+    if (value.startsWith('http://')) {
+      fail('remote http:// ' + kind + ' URL is unsupported in saved slides; download it into ./assets/<file>', { src: value });
+      return false;
+    }
+    if (absolutePathRe.test(value) || value.startsWith('/')) {
+      fail('non-portable ' + kind + ' path is unsupported', { src: value });
+      return false;
+    }
+    if (schemeRe.test(value)) {
+      fail('unsupported ' + kind + ' URL scheme in saved slides; download it into ./assets/<file>', { src: value });
+      return false;
+    }
+    if (!value.startsWith(localAssetPrefix)) {
+      const report = onNoncanonical === 'fail' ? fail : warn;
+      report('noncanonical local ' + kind + ' path should use ./assets/<file>', { src: value });
+    }
+    return true;
+  }
+
+  function getVideoSources(video) {
+    const sources = [];
+    const directSrc = (video.getAttribute('src') || '').trim();
+    if (directSrc) {
+      sources.push(directSrc);
+    }
+    for (const source of video.querySelectorAll('source[src]')) {
+      const src = (source.getAttribute('src') || '').trim();
+      if (src) {
+        sources.push(src);
+      }
+    }
+    return sources;
+  }
+
+  window.addEventListener('error', (event) => {
+    const target = event.target;
+    if (target instanceof HTMLImageElement) {
+      const src = (target.getAttribute('src') || target.currentSrc || '').trim();
+      if (!src || src.startsWith('data:')) return;
+      if (src.startsWith(localAssetPrefix)) {
+        fail('missing local asset', { src });
+        return;
+      }
+      fail('image failed to load', { src });
+      return;
+    }
+
+    if (target instanceof HTMLVideoElement) {
+      const sources = getVideoSources(target);
+      if (sources.some((src) => src.startsWith(localAssetPrefix))) {
+        fail('missing local video asset', { sources });
+        return;
+      }
+      fail('video failed to load', { sources });
+      return;
+    }
+
+    if (target instanceof HTMLSourceElement &amp;&amp; target.parentElement instanceof HTMLVideoElement) {
+      const src = (target.getAttribute('src') || '').trim();
+      if (!src) return;
+      if (src.startsWith(localAssetPrefix)) {
+        fail('missing local video asset', { src });
+        return;
+      }
+      fail('video source failed to load', { src });
+    }
+  }, true);
+
+  window.addEventListener('DOMContentLoaded', () => {
+    for (const image of document.querySelectorAll('img[src]')) {
+      const src = (image.getAttribute('src') || '').trim();
+      validateAssetSource('image', src);
+    }
+
+    for (const video of document.querySelectorAll('video')) {
+      for (const src of getVideoSources(video)) {
+        validateAssetSource('video', src);
+      }
+
+      const poster = (video.getAttribute('poster') || '').trim();
+      if (poster) {
+        validateAssetSource('image', poster);
+      }
+    }
+
+    for (const element of document.body.querySelectorAll('*')) {
+      if (element === document.body) continue;
+      const backgroundImage = window.getComputedStyle(element).backgroundImage;
+      if (!backgroundImage || backgroundImage === 'none' || !backgroundImage.includes('url(')) continue;
+      fail('non-body background-image is not supported for slide content', {
+        element: describeElement(element),
+        backgroundImage,
+      });
+    }
+  });
+})();
+</script>
+    <meta charset=&quot;UTF-8&quot; />
+    <meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1.0&quot; />
+    <title>로드맵과 마무리</title>
+    <link rel=&quot;stylesheet&quot; href=&quot;./assets/theme.css&quot; />
+  </head>
+  <body>
+    <div class=&quot;slide&quot;>
+      <div class=&quot;topbar&quot;>
+        <div>
+          <div class=&quot;badge&quot;>Roadmap + Closing</div>
+          <h2 class=&quot;section-title&quot;>견적봄은 여기서 끝나지 않고 더 자주 쓰이게 됩니다</h2>
+        </div>
+        <div class=&quot;page-no&quot;>07</div>
+      </div>
+
+      <div class=&quot;closing-grid&quot;>
+        <div class=&quot;closing-quote&quot;>
+          <div class=&quot;badge&quot; style=&quot;width: fit-content; color: white; border-color: rgba(255,255,255,0.18); background: rgba(255,255,255,0.08);&quot;>Closing Message</div>
+          <h2>나부터 불안했던 문제를, 견적봄으로 먼저 풀었습니다</h2>
+          <p>
+            인테리어 견적 해독기는 제가 직접 느낀 불안,
+            &quot;이 자재값이 진짜인지 모르겠다&quot;는 문제를
+            가격 기준, 질문 구조, AI 분석으로 해결하려는 도구입니다.
+          </p>
+          <ul>
+            <li>개인적인 불편에서 시작했지만 많은 소비자가 같이 겪는 문제입니다.</li>
+            <li>견적 불안을 숫자와 질문으로 바꾸는 실용 제품입니다.</li>
+            <li>앞으로는 더 자동화된 견적 해독 경험으로 확장할 수 있습니다.</li>
+          </ul>
+        </div>
+
+        <div class=&quot;road-grid&quot;>
+          <div class=&quot;road-card&quot;>
+            <div class=&quot;road-icon&quot;>⚖️</div>
+            <div class=&quot;kicker&quot;>Roadmap 1</div>
+            <h3>견적 비교 엔진</h3>
+            <p>A/B 견적을 공정별 차이, 누락 항목, 숨은 추가비, 위험 점수까지 비교합니다.</p>
+          </div>
+          <div class=&quot;road-card&quot;>
+            <div class=&quot;road-icon&quot;>📄</div>
+            <div class=&quot;kicker&quot;>Roadmap 2</div>
+            <h3>OCR 업로드 + 누락 체크</h3>
+            <p>PDF와 이미지 견적서를 자동 구조화하고, 보통 들어가야 할 항목을 체크리스트로 검증합니다.</p>
+          </div>
+          <div class=&quot;road-card&quot;>
+            <div class=&quot;road-icon&quot;>🧾</div>
+            <div class=&quot;kicker&quot;>Roadmap 3</div>
+            <h3>협상 시뮬레이터</h3>
+            <p>스펙 용어를 쉽게 풀고, 옵션 변경 시 총액 차이를 즉시 계산해 질문까지 만들어줍니다.</p>
+          </div>
+          <div class=&quot;road-card&quot;>
+            <div class=&quot;road-icon&quot;>🏠</div>
+            <div class=&quot;kicker&quot;>Roadmap 4</div>
+            <h3>반복 사용 제품화</h3>
+            <p>내 집 프로필, 결과 저장·공유, 상담 리포트, 수정 견적 이력 관리로 재방문 가치를 만듭니다.</p>
+          </div>
+          <div class=&quot;road-card&quot; style=&quot;grid-column: 1 / span 2;&quot;>
+            <div class=&quot;kicker&quot;>Pitch</div>
+            <h3>결국 우리가 만드는 것은 &quot;견적 계산기&quot;가 아닙니다</h3>
+            <p>
+              정보가 파편화된 시장에서, 소비자가 숫자와 질문을 무기로
+              더 나은 결정을 하게 만드는 구매 보조 인터페이스입니다.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class=&quot;footer&quot;>
+        <span>Interior Quote Decoder · Hackathon Presentation</span>
+        <span>07</span>
+      </div>
+    </div>
+  </body>
+</html>
+" sandbox="allow-same-origin"></iframe>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const TOTAL = 7;
+    let current = 1;
+
+    const frames = document.querySelectorAll('.slide-frame');
+    const counter = document.getElementById('counter');
+    const btnPrev = document.getElementById('btn-prev');
+    const btnNext = document.getElementById('btn-next');
+    const scaler = document.getElementById('scaler');
+    const viewport = document.getElementById('viewport');
+
+    function goTo(n) {
+      n = Math.max(1, Math.min(TOTAL, n));
+      if (n === current) return;
+      frames[current - 1].classList.remove('active');
+      current = n;
+      frames[current - 1].classList.add('active');
+      counter.textContent = current + ' / ' + TOTAL;
+      btnPrev.disabled = current === 1;
+      btnNext.disabled = current === TOTAL;
+    }
+
+    function next() { goTo(current + 1); }
+    function prev() { goTo(current - 1); }
+
+    btnPrev.addEventListener('click', prev);
+    btnNext.addEventListener('click', next);
+    btnPrev.disabled = true;
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); next(); }
+      else if (e.key === 'ArrowLeft') { e.preventDefault(); prev(); }
+      else if (e.key === 'Home') { e.preventDefault(); goTo(1); }
+      else if (e.key === 'End') { e.preventDefault(); goTo(TOTAL); }
+      else if (e.key === 'f' || e.key === 'F') {
+        e.preventDefault();
+        toggleFullscreen();
+      }
+    });
+
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      } else {
+        document.exitFullscreen();
+      }
+    }
+    document.getElementById('btn-fs').addEventListener('click', toggleFullscreen);
+
+    function rescale() {
+      const vw = viewport.clientWidth;
+      const vh = viewport.clientHeight;
+      const slideW = scaler.offsetWidth;
+      const slideH = scaler.offsetHeight;
+      const scale = Math.min(vw / slideW, vh / slideH) * 0.95;
+      scaler.style.transform = 'scale(' + scale + ')';
+    }
+
+    window.addEventListener('resize', rescale);
+    document.addEventListener('fullscreenchange', () => setTimeout(rescale, 100));
+    rescale();
+  </script>
+</body>
+</html>
