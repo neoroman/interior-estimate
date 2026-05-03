@@ -18,6 +18,10 @@
   const meetingReportMore = document.getElementById("meeting-report-more");
   const meetingReportMoreSummary = document.getElementById("meeting-report-more-summary");
   const meetingReportMoreList = document.getElementById("meeting-report-more-list");
+  const hiddenCheckSummary = document.getElementById("hidden-check-summary");
+  const hiddenCheckList = document.getElementById("hidden-check-list");
+  const measurementCheckSummary = document.getElementById("measurement-check-summary");
+  const measurementCheckList = document.getElementById("measurement-check-list");
   const pyeongRange = document.getElementById("pyeong-range");
   const pyeongInput = document.getElementById("pyeong-input");
   const quoteTotalInput = document.getElementById("quote-total");
@@ -26,6 +30,21 @@
   const estimateDetail = document.getElementById("estimate-detail");
   const verdictBadge = document.getElementById("verdict-badge");
   const verdictCopy = document.getElementById("verdict-copy");
+  const specFocusList = document.getElementById("spec-focus-list");
+  const specSearchInput = document.getElementById("spec-search-input");
+  const specFilterActive = document.getElementById("spec-filter-active");
+  const specGlossarySummary = document.getElementById("spec-glossary-summary");
+  const specGlossaryList = document.getElementById("spec-glossary-list");
+  const simCurrentTotal = document.getElementById("sim-current-total");
+  const simNextTotal = document.getElementById("sim-next-total");
+  const simDeltaTotal = document.getElementById("sim-delta-total");
+  const simDeltaCopy = document.getElementById("sim-delta-copy");
+  const simRecommendationList = document.getElementById("sim-recommendation-list");
+  const simScenarioList = document.getElementById("sim-scenario-list");
+  const simScriptList = document.getElementById("sim-script-list");
+  const menuTabButtons = Array.from(document.querySelectorAll("[data-menu-tab]"));
+  const menuTabPanels = Array.from(document.querySelectorAll("[data-menu-panel]"));
+  const MENU_TAB_STORAGE_KEY = "interier-active-menu-tab";
 
   const processNames = Object.keys(window.prices);
   const selectedGrades = Object.fromEntries(
@@ -40,6 +59,16 @@
   const quotedUnitPrices = Object.fromEntries(
     processNames.map((processName) => [processName, ""])
   );
+  const simulationChoices = Object.fromEntries(
+    processNames.map((processName) => [processName, "keep"])
+  );
+  const glossaryEntries = Array.isArray(window.specGlossary) ? window.specGlossary : [];
+  const hiddenConstructionChecklist = Array.isArray(window.hiddenConstructionChecklist)
+    ? window.hiddenConstructionChecklist
+    : [];
+  const measurementChecklist = Array.isArray(window.measurementChecklist)
+    ? window.measurementChecklist
+    : [];
 
   function formatWon(value) {
     return `${Math.round(value).toLocaleString("ko-KR")}원`;
@@ -55,6 +84,96 @@
       return 33;
     }
     return Math.min(60, Math.max(10, numeric));
+  }
+
+  function activateMenuTab(tabName, options = {}) {
+    if (!menuTabButtons.length || !menuTabPanels.length) {
+      return;
+    }
+
+    const { focus = false } = options;
+    const nextTab = menuTabButtons.find((button) => button.dataset.menuTab === tabName)
+      ? tabName
+      : menuTabButtons[0]?.dataset.menuTab;
+
+    if (!nextTab) {
+      return;
+    }
+
+    menuTabButtons.forEach((button) => {
+      const isActive = button.dataset.menuTab === nextTab;
+      button.setAttribute("aria-selected", String(isActive));
+      button.tabIndex = isActive ? 0 : -1;
+      if (isActive && focus) {
+        button.focus();
+      }
+    });
+
+    menuTabPanels.forEach((panel) => {
+      panel.hidden = panel.dataset.menuPanel !== nextTab;
+    });
+
+    try {
+      window.localStorage.setItem(MENU_TAB_STORAGE_KEY, nextTab);
+    } catch (error) {
+      // Ignore storage failures in private mode or embedded browsers.
+    }
+  }
+
+  function moveMenuTabFocus(currentTabName, direction) {
+    const currentIndex = menuTabButtons.findIndex(
+      (button) => button.dataset.menuTab === currentTabName
+    );
+
+    if (currentIndex === -1) {
+      return;
+    }
+
+    const nextIndex = (currentIndex + direction + menuTabButtons.length) % menuTabButtons.length;
+    const nextButton = menuTabButtons[nextIndex];
+    activateMenuTab(nextButton.dataset.menuTab, { focus: true });
+  }
+
+  function initMenuTabs() {
+    if (!menuTabButtons.length || !menuTabPanels.length) {
+      return;
+    }
+
+    menuTabButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        activateMenuTab(button.dataset.menuTab, { focus: false });
+      });
+
+      button.addEventListener("keydown", (event) => {
+        if (event.key === "ArrowRight") {
+          event.preventDefault();
+          moveMenuTabFocus(button.dataset.menuTab, 1);
+        } else if (event.key === "ArrowLeft") {
+          event.preventDefault();
+          moveMenuTabFocus(button.dataset.menuTab, -1);
+        } else if (event.key === "Home") {
+          event.preventDefault();
+          activateMenuTab(menuTabButtons[0].dataset.menuTab, { focus: true });
+        } else if (event.key === "End") {
+          event.preventDefault();
+          activateMenuTab(menuTabButtons[menuTabButtons.length - 1].dataset.menuTab, {
+            focus: true,
+          });
+        }
+      });
+    });
+
+    let initialTab = menuTabButtons[0].dataset.menuTab;
+    try {
+      const storedTab = window.localStorage.getItem(MENU_TAB_STORAGE_KEY);
+      if (storedTab) {
+        initialTab = storedTab;
+      }
+    } catch (error) {
+      // Ignore storage failures in private mode or embedded browsers.
+    }
+
+    activateMenuTab(initialTab);
   }
 
   function parseUnitPrice(value) {
@@ -174,6 +293,211 @@
     };
   }
 
+  function getReferenceMidpoint(reference) {
+    return (reference.priceMin + reference.priceMax) / 2;
+  }
+
+  function getGradeIndex(gradeKey) {
+    return GRADE_ORDER.indexOf(gradeKey);
+  }
+
+  function getGradeLabel(gradeKey) {
+    return GRADE_DISPLAY[gradeKey] || gradeKey;
+  }
+
+  function getReferenceForGrade(processName, gradeKey) {
+    const grade = window.prices[processName].grades[gradeKey];
+    const references = grade.references || [];
+    const currentIndex = Number(selectedReferenceIndex[processName]);
+    if (references.length === 0) {
+      return null;
+    }
+    const safeIndex =
+      Number.isInteger(currentIndex) && currentIndex >= 0 && currentIndex < references.length
+        ? currentIndex
+        : 0;
+    return references[safeIndex] || references[0];
+  }
+
+  function ensureSimulationChoice(processName) {
+    const currentChoice = simulationChoices[processName];
+    const gradeKey = selectedGrades[processName];
+    const gradeIndex = getGradeIndex(gradeKey);
+
+    if (!enabledProcesses[processName]) {
+      return "off";
+    }
+
+    if (currentChoice === "down" && gradeIndex <= 0) {
+      simulationChoices[processName] = "keep";
+      return "keep";
+    }
+
+    if (!["keep", "down", "off"].includes(currentChoice)) {
+      simulationChoices[processName] = "keep";
+      return "keep";
+    }
+
+    return currentChoice;
+  }
+
+  function getSimulationOutcome(processName) {
+    const currentGradeKey = selectedGrades[processName];
+    const currentReference = getActiveReference(processName);
+    const action = ensureSimulationChoice(processName);
+    const currentMid = getReferenceMidpoint(currentReference);
+
+    if (action === "off") {
+      return {
+        action,
+        processName,
+        nextGradeKey: null,
+        nextReference: null,
+        currentMid,
+        nextMid: 0,
+        deltaPerPyeong: -currentMid,
+        label: "제외 검토",
+        copy: "이 공정을 이번 범위에서 빼거나, 다른 공사와 분리 발주하는 시나리오입니다.",
+      };
+    }
+
+    if (action === "down") {
+      const nextGradeKey = GRADE_ORDER[Math.max(getGradeIndex(currentGradeKey) - 1, 0)];
+      const nextReference = getReferenceForGrade(processName, nextGradeKey);
+      const nextMid = nextReference ? getReferenceMidpoint(nextReference) : currentMid;
+
+      return {
+        action,
+        processName,
+        nextGradeKey,
+        nextReference,
+        currentMid,
+        nextMid,
+        deltaPerPyeong: nextMid - currentMid,
+        label: "한 단계 낮추기",
+        copy: `${getGradeLabel(currentGradeKey)}에서 ${getGradeLabel(nextGradeKey)}으로 조정하는 시나리오입니다.`,
+      };
+    }
+
+    return {
+      action,
+      processName,
+      nextGradeKey: currentGradeKey,
+      nextReference: currentReference,
+      currentMid,
+      nextMid: currentMid,
+      deltaPerPyeong: 0,
+      label: "유지",
+      copy: "현재 선택한 등급과 세부 기준을 그대로 유지합니다.",
+    };
+  }
+
+  function buildSimulationOptions(processName) {
+    const options = [
+      { value: "keep", label: "유지" },
+    ];
+
+    if (getGradeIndex(selectedGrades[processName]) > 0) {
+      options.push({ value: "down", label: "한 단계 낮추기" });
+    }
+
+    options.push({ value: "off", label: "제외 검토" });
+    return options;
+  }
+
+  function getDefaultRecommendation(processName) {
+    const currentGradeKey = selectedGrades[processName];
+    const currentReference = getActiveReference(processName);
+    const currentMid = getReferenceMidpoint(currentReference);
+
+    const downgradeGradeKey = GRADE_ORDER[Math.max(getGradeIndex(currentGradeKey) - 1, 0)];
+    const downgradeReference =
+      downgradeGradeKey === currentGradeKey
+        ? currentReference
+        : getReferenceForGrade(processName, downgradeGradeKey);
+    const downgradeMid = downgradeReference ? getReferenceMidpoint(downgradeReference) : currentMid;
+
+    const downgradeDelta = downgradeMid - currentMid;
+    const offDelta = -currentMid;
+
+    if (downgradeDelta < 0) {
+      return {
+        processName,
+        action: "down",
+        nextGradeKey: downgradeGradeKey,
+        nextReference: downgradeReference,
+        deltaPerPyeong: downgradeDelta,
+      };
+    }
+
+    return {
+      processName,
+      action: "off",
+      nextGradeKey: null,
+      nextReference: null,
+      deltaPerPyeong: offDelta,
+    };
+  }
+
+  function getRecommendationAsk(entry) {
+    if (entry.action === "off") {
+      return `${entry.processName} 공정을 이번 범위에서 빼면 어떤 하자나 공백이 생기는지, 분리 발주도 가능한지 설명해주세요.`;
+    }
+
+    return `${entry.processName}을 ${getGradeLabel(selectedGrades[entry.processName])}에서 ${getGradeLabel(
+      entry.nextGradeKey
+    )}으로 낮추면 빠지는 스펙과 절감액을 항목별로 적어주세요.`;
+  }
+
+  function getGlossaryMatches(processName) {
+    return glossaryEntries.filter((entry) =>
+      (entry.relatedProcesses || []).includes(processName)
+    );
+  }
+
+  function getPrimaryGlossaryProcess(entry) {
+    const related = Array.isArray(entry.relatedProcesses) ? entry.relatedProcesses : [];
+    const firstKnown = related.find((processName) => processNames.includes(processName));
+    return firstKnown || "공통";
+  }
+
+  function buildGlossaryGroups(entries, activeProcesses, activeOnly) {
+    const groupOrder = activeOnly && activeProcesses.length > 0
+      ? [...activeProcesses, "공통"]
+      : [...processNames, "공통"];
+    const groupMap = new Map(groupOrder.map((name) => [name, []]));
+
+    entries.forEach((entry) => {
+      const primaryProcess = getPrimaryGlossaryProcess(entry);
+      if (!groupMap.has(primaryProcess)) {
+        groupMap.set(primaryProcess, []);
+      }
+      groupMap.get(primaryProcess).push(entry);
+    });
+
+    return groupOrder
+      .map((name) => ({
+        processName: name,
+        entries: (groupMap.get(name) || []).sort((a, b) => a.term.localeCompare(b.term, "ko")),
+      }))
+      .filter((group) => group.entries.length > 0);
+  }
+
+  function getRoomPriority(room, activeProcesses) {
+    const roomProcessMap = {
+      현관: ["목공", "필름", "전기/조명", "마감"],
+      거실: ["전기/조명", "목공", "마루/장판", "도배", "창호"],
+      주방: ["가구", "전기/조명", "설비/방수", "타일", "마감"],
+      욕실: ["욕실", "타일", "설비/방수", "도장", "마감"],
+    };
+
+    const relatedProcesses = roomProcessMap[room] || [];
+    return relatedProcesses.reduce(
+      (count, processName) => count + (activeProcesses.includes(processName) ? 1 : 0),
+      0
+    );
+  }
+
   function normalizeText(value) {
     return String(value || "")
       .toLowerCase()
@@ -189,12 +513,15 @@
       .replaceAll('"', "&quot;");
   }
 
-  function getChecklistItems(processName) {
+  function getChecklistBundle(processName) {
     const processData = window.prices[processName];
     const checklist = processData.missingChecklist || {};
     const gradeKey = selectedGrades[processName];
 
-    return [...(checklist.common || []), ...(checklist[gradeKey] || [])];
+    return {
+      common: [...(checklist.common || [])],
+      gradeSpecific: [...(checklist[gradeKey] || [])],
+    };
   }
 
   function buildGradeSpecificQuestions(processName) {
@@ -759,10 +1086,12 @@
     let missingItems = 0;
 
     activeProcesses.forEach((processName) => {
-      const items = getChecklistItems(processName);
+      const checklist = getChecklistBundle(processName);
+      const items = checklist.common;
+      const gradeSpecificItems = checklist.gradeSpecific;
       const relatedChecks = getRelatedProcessChecks(processName);
 
-      if (items.length === 0 && relatedChecks.length === 0) {
+      if (items.length === 0 && relatedChecks.length === 0 && gradeSpecificItems.length === 0) {
         return;
       }
 
@@ -813,10 +1142,10 @@
         });
       }
 
-      if (relatedChecks.length > 0 && items.length > 0) {
+      if (relatedChecks.length > 0 && (items.length > 0 || gradeSpecificItems.length > 0)) {
         const divider = document.createElement("li");
         divider.className = "omission-section-label";
-        divider.textContent = "세부 체크포인트";
+        divider.textContent = "기본 체크포인트";
         list.appendChild(divider);
       }
 
@@ -844,17 +1173,563 @@
         list.appendChild(row);
       });
 
+      if (gradeSpecificItems.length > 0) {
+        const divider = document.createElement("li");
+        divider.className = "omission-section-label";
+        divider.textContent = "등급 선택 시 추가 힌트";
+        list.appendChild(divider);
+
+        gradeSpecificItems.forEach((item) => {
+          const row = document.createElement("li");
+          row.className = "omission-item omission-item-soft";
+          row.innerHTML = `
+            <div class="omission-item-head">
+              <span class="omission-item-title">${escapeHtml(item.label)}</span>
+              <span class="omission-badge omission-pending">참고</span>
+            </div>
+            <div class="omission-item-copy">${escapeHtml(item.note)}</div>
+          `;
+          list.appendChild(row);
+        });
+      }
+
       processGroup.appendChild(head);
       processGroup.appendChild(list);
       omissionList.appendChild(processGroup);
     });
 
     if (!normalizedEstimateText) {
-      omissionSummaryCopy.textContent = `선택한 ${activeProcesses.length}개 공정 기준으로 ${totalItems}개 체크포인트를 정리했습니다. 견적서 텍스트를 붙여넣으면 항목별로 확인됨/누락 의심 상태가 자동 표시됩니다.`;
+      omissionSummaryCopy.textContent = `선택한 ${activeProcesses.length}개 공정 기준으로 ${totalItems}개 기본 체크포인트를 정리했습니다. 등급을 몰라도 먼저 공정 기준으로 확인할 수 있고, 등급별 항목은 아래에 참고 힌트로만 보여줍니다.`;
       return;
     }
 
     omissionSummaryCopy.textContent = `붙여넣은 견적서 기준 ${totalItems}개 체크포인트 중 ${foundItems}개 확인, ${missingItems}개 누락 의심입니다. 누락 의심 항목은 포함 여부를 다시 물어보는 편이 안전합니다.`;
+  }
+
+  function renderSpecFocus() {
+    if (!specFocusList) {
+      return;
+    }
+
+    specFocusList.innerHTML = "";
+
+    const activeProcesses = getActiveProcessNames();
+    if (activeProcesses.length === 0) {
+      specFocusList.innerHTML =
+        '<div class="spec-empty">공정을 하나 이상 선택하면 현재 기준에서 먼저 이해해야 할 스펙과 용어를 자동으로 묶어서 보여줍니다.</div>';
+      return;
+    }
+
+    activeProcesses.forEach((processName) => {
+      const grade = getActiveGrade(processName);
+      const reference = getActiveReference(processName);
+      const glossary = getGlossaryMatches(processName).slice(0, 4);
+      const card = document.createElement("details");
+      card.className = "spec-focus-card";
+      card.open = activeProcesses.length <= 2;
+      const glossaryMarkup =
+        glossary.length === 0
+          ? '<li><span class="spec-key-label">꼭 알아둘 용어</span><span class="spec-key-value">관련 용어 준비 중</span></li>'
+          : glossary
+              .map(
+                (entry) => `
+                  <li>
+                    <span class="spec-key-label">${escapeHtml(entry.term)}</span>
+                    <span class="spec-key-value">${escapeHtml(entry.summary)}</span>
+                  </li>
+                `
+              )
+              .join("");
+
+      card.innerHTML = `
+        <summary class="spec-focus-head">
+          <div>
+            <h3 class="spec-focus-title">${escapeHtml(processName)}</h3>
+            <p class="spec-focus-meta">${escapeHtml(
+              `${grade.label} · ${getReferenceLabel(reference)} / ${reference.spec}`
+            )}</p>
+          </div>
+          <span class="spec-badge">현재 기준</span>
+        </summary>
+        <div class="spec-section">
+          <h4 class="spec-section-title">핵심 스펙</h4>
+          <ul class="spec-focus-points">
+            <li><span class="spec-key-label">규격 요약</span><span class="spec-key-value">${escapeHtml(reference.specSummary)}</span></li>
+            <li><span class="spec-key-label">대표 기준</span><span class="spec-key-value">${escapeHtml(reference.spec)}</span></li>
+            <li><span class="spec-key-label">비용 범위</span><span class="spec-key-value">${escapeHtml(
+              `${formatWon(reference.priceMin)} ~ ${formatWon(reference.priceMax)} / 평`
+            )}</span></li>
+          </ul>
+        </div>
+        <div class="spec-section">
+          <h4 class="spec-section-title">이 공정에서 자주 나오는 용어</h4>
+          <ul class="spec-focus-points spec-focus-glossary">${glossaryMarkup}</ul>
+        </div>
+        <div class="spec-section">
+          <h4 class="spec-section-title">미리 확인할 포인트</h4>
+          <ul class="spec-focus-points">
+            <li><span class="spec-key-label">포함</span><span class="spec-key-value">${escapeHtml(grade.includes)}</span></li>
+            <li><span class="spec-key-label">제외</span><span class="spec-key-value">${escapeHtml(grade.excludes)}</span></li>
+          </ul>
+        </div>
+      `;
+      specFocusList.appendChild(card);
+    });
+  }
+
+  function renderHiddenConstructionChecks() {
+    if (!hiddenCheckList || !hiddenCheckSummary) {
+      return;
+    }
+
+    hiddenCheckList.innerHTML = "";
+
+    const activeProcesses = getActiveProcessNames();
+    const orderedRooms = [...hiddenConstructionChecklist].sort((a, b) => {
+      const priorityDiff =
+        getRoomPriority(b.room, activeProcesses) - getRoomPriority(a.room, activeProcesses);
+
+      if (priorityDiff !== 0) {
+        return priorityDiff;
+      }
+
+      return 0;
+    });
+
+    hiddenCheckSummary.textContent =
+      activeProcesses.length === 0
+        ? "공정 선택과 상관없이 자주 놓치는 항목을 공간별로 확인할 수 있습니다."
+        : `현재 선택한 공정과 가까운 공간을 먼저 보여줍니다. 상담 전에 ${orderedRooms.length}개 공간 체크리스트를 훑어보세요.`;
+
+    orderedRooms.forEach((section) => {
+      const card = document.createElement("article");
+      card.className = "hidden-check-room";
+
+      const priority = getRoomPriority(section.room, activeProcesses);
+      const badgeLabel = priority > 0 ? "현재 공정 연관" : "공통 체크";
+      const itemsMarkup = section.items
+        .map((item) => `<li>${escapeHtml(item)}</li>`)
+        .join("");
+
+      card.innerHTML = `
+        <div class="hidden-check-head">
+          <div>
+            <h3>${escapeHtml(section.room)}</h3>
+            <p>${escapeHtml(section.summary)}</p>
+          </div>
+          <span class="hidden-check-badge">${escapeHtml(badgeLabel)}</span>
+        </div>
+        <ol class="hidden-check-items">${itemsMarkup}</ol>
+      `;
+
+      hiddenCheckList.appendChild(card);
+    });
+  }
+
+  function getMeasurementPriority(room, activeProcesses) {
+    const roomProcessMap = {
+      "공통 준비": processNames,
+      현관: ["목공", "필름", "전기/조명", "마감"],
+      거실: ["전기/조명", "목공", "마루/장판", "도배", "창호", "시스템에어컨"],
+      주방: ["가구", "전기/조명", "설비/방수", "타일", "마감"],
+      "침실·붙박이장": ["가구", "목공", "도배", "전기/조명", "창호", "시스템에어컨"],
+      욕실: ["욕실", "타일", "설비/방수", "전기/조명", "마감"],
+      "발코니·다용도실": ["도장", "설비/방수", "마감", "가구"],
+      "창호·설비 포인트": ["창호", "설비/방수", "전기/조명", "시스템에어컨"],
+    };
+
+    const relatedProcesses = roomProcessMap[room] || [];
+    return relatedProcesses.reduce(
+      (count, processName) => count + (activeProcesses.includes(processName) ? 1 : 0),
+      0
+    );
+  }
+
+  function renderMeasurementChecks() {
+    if (!measurementCheckList || !measurementCheckSummary) {
+      return;
+    }
+
+    measurementCheckList.innerHTML = "";
+
+    const activeProcesses = getActiveProcessNames();
+    const orderedSections = [...measurementChecklist].sort((a, b) => {
+      const priorityDiff =
+        getMeasurementPriority(b.room, activeProcesses) -
+        getMeasurementPriority(a.room, activeProcesses);
+
+      if (priorityDiff !== 0) {
+        return priorityDiff;
+      }
+
+      return 0;
+    });
+
+    measurementCheckSummary.textContent =
+      activeProcesses.length === 0
+        ? "실측 전 준비물부터 공간별 핵심 치수까지, 현장에서 빠뜨리기 쉬운 항목을 먼저 확인하세요."
+        : `현재 선택한 공정과 가까운 실측 항목을 먼저 보여줍니다. 현장에서 ${orderedSections.length}개 구역을 순서대로 체크해보세요.`;
+
+    orderedSections.forEach((section) => {
+      const card = document.createElement("article");
+      card.className = "hidden-check-room";
+
+      const priority = getMeasurementPriority(section.room, activeProcesses);
+      const badgeLabel = priority > 0 ? "현재 공정 연관" : "실측 공통";
+      const itemsMarkup = section.items
+        .map((item) => `<li>${escapeHtml(item)}</li>`)
+        .join("");
+
+      card.innerHTML = `
+        <div class="hidden-check-head">
+          <div>
+            <h3>${escapeHtml(section.room)}</h3>
+            <p>${escapeHtml(section.summary)}</p>
+          </div>
+          <span class="hidden-check-badge">${escapeHtml(badgeLabel)}</span>
+        </div>
+        <ol class="hidden-check-items">${itemsMarkup}</ol>
+      `;
+
+      measurementCheckList.appendChild(card);
+    });
+  }
+
+  function renderSpecGlossary() {
+    if (!specGlossaryList || !specGlossarySummary) {
+      return;
+    }
+
+    specGlossaryList.innerHTML = "";
+
+    const search = normalizeText(specSearchInput?.value || "");
+    const activeOnly = Boolean(specFilterActive?.checked);
+    const activeProcesses = getActiveProcessNames();
+
+    const filtered = glossaryEntries.filter((entry) => {
+      const matchesActive =
+        !activeOnly ||
+        activeProcesses.length === 0 ||
+        (entry.relatedProcesses || []).some((processName) =>
+          activeProcesses.includes(processName)
+        );
+
+      const haystack = normalizeText(
+        [entry.term, entry.category, entry.summary, entry.whyItMatters, entry.ask]
+          .concat(entry.aliases || [])
+          .join(" ")
+      );
+      const matchesSearch = search === "" || haystack.includes(search);
+
+      return matchesActive && matchesSearch;
+    });
+
+    if (filtered.length === 0) {
+      specGlossarySummary.textContent =
+        "검색 결과가 없습니다. 다른 용어를 검색하거나, 선택 공정 필터를 꺼서 전체 사전을 확인해보세요.";
+      specGlossaryList.innerHTML =
+        '<div class="spec-empty">조건에 맞는 용어가 없습니다.</div>';
+      return;
+    }
+
+    specGlossarySummary.textContent =
+      activeOnly && activeProcesses.length > 0
+        ? `선택한 ${activeProcesses.length}개 공정과 관련된 용어 ${filtered.length}개를 먼저 보여줍니다.`
+        : `전체 용어 사전에서 ${filtered.length}개를 보여줍니다.`;
+
+    const groups = buildGlossaryGroups(filtered, activeProcesses, activeOnly);
+
+    groups.forEach((group) => {
+      const section = document.createElement("details");
+      section.className = "spec-glossary-group";
+      section.open =
+        (activeOnly && activeProcesses.includes(group.processName)) ||
+        (!activeOnly && groups.length <= 2) ||
+        group.processName === "공통";
+
+      const titleCopy =
+        group.processName === "공통"
+          ? "여러 공정에서 같이 나오는 표현입니다."
+          : `${group.processName} 견적을 볼 때 같이 확인하면 좋은 용어입니다.`;
+
+      const cardsMarkup = group.entries
+        .map(
+          (entry) => `
+            <article class="spec-glossary-card">
+              <div class="spec-glossary-head">
+                <div>
+                  <h3 class="spec-glossary-title">${escapeHtml(entry.term)}</h3>
+                  <p class="spec-glossary-meta">${escapeHtml(entry.category)} · 관련 공정 ${escapeHtml(
+                    (entry.relatedProcesses || []).join(", ")
+                  )}</p>
+                </div>
+                <span class="spec-badge">${escapeHtml(entry.category)}</span>
+              </div>
+              <ul class="spec-glossary-points">
+                <li>무슨 뜻인지: ${escapeHtml(entry.summary)}</li>
+                <li>왜 중요한지: ${escapeHtml(entry.whyItMatters)}</li>
+                <li>${escapeHtml(entry.ask)}</li>
+              </ul>
+            </article>
+          `
+        )
+        .join("");
+
+      section.innerHTML = `
+        <summary class="spec-group-head">
+          <div>
+            <h3 class="spec-group-title">${escapeHtml(group.processName)}</h3>
+            <p class="spec-group-copy">${escapeHtml(titleCopy)}</p>
+          </div>
+          <span class="spec-group-count">${group.entries.length}개</span>
+        </summary>
+        <div class="spec-glossary-group-list">${cardsMarkup}</div>
+      `;
+
+      specGlossaryList.appendChild(section);
+    });
+  }
+
+  function renderNegotiationSimulator() {
+    if (
+      !simCurrentTotal ||
+      !simNextTotal ||
+      !simDeltaTotal ||
+      !simDeltaCopy ||
+      !simRecommendationList ||
+      !simScenarioList ||
+      !simScriptList
+    ) {
+      return;
+    }
+
+    simRecommendationList.innerHTML = "";
+    simScenarioList.innerHTML = "";
+    simScriptList.innerHTML = "";
+
+    const activeProcesses = getActiveProcessNames();
+    const pyeong = clampPyeong(pyeongInput.value);
+
+    if (activeProcesses.length === 0) {
+      simCurrentTotal.textContent = "-";
+      simNextTotal.textContent = "-";
+      simDeltaTotal.textContent = "-";
+      simDeltaTotal.className = "sim-amount";
+      simDeltaCopy.textContent =
+        "공정을 하나 이상 선택하면 등급 조정 시 절감 가능 금액을 계산합니다.";
+      simRecommendationList.innerHTML =
+        '<div class="sim-empty">공정을 선택하면 절감 효과가 큰 추천 협상안 3개를 먼저 보여줍니다.</div>';
+      simScenarioList.innerHTML =
+        '<div class="sim-empty">공정을 선택하면 공정별로 유지, 한 단계 낮추기, 제외 검토 시나리오를 조정할 수 있습니다.</div>';
+      simScriptList.innerHTML =
+        "<li>공정을 선택하면 바로 꺼내 쓸 협상 문장이 여기에 정리됩니다.</li>";
+      return;
+    }
+
+    let currentTotal = 0;
+    let nextTotal = 0;
+    const changedItems = [];
+    const scenarioEntries = [];
+
+    activeProcesses.forEach((processName) => {
+      const outcome = getSimulationOutcome(processName);
+      const currentTotalWon = outcome.currentMid * pyeong;
+      const nextTotalWon = outcome.nextMid * pyeong;
+      const deltaWon = nextTotalWon - currentTotalWon;
+      currentTotal += currentTotalWon;
+      nextTotal += nextTotalWon;
+
+      scenarioEntries.push({
+        processName,
+        outcome,
+        currentTotalWon,
+        nextTotalWon,
+        deltaWon,
+      });
+    });
+
+    const recommendationItems = activeProcesses
+      .map((processName) => {
+        const recommendation = getDefaultRecommendation(processName);
+        return {
+          ...recommendation,
+          deltaWon: recommendation.deltaPerPyeong * pyeong,
+        };
+      })
+      .filter((entry) => entry.deltaWon < 0)
+      .sort((a, b) => a.deltaWon - b.deltaWon)
+      .slice(0, 3);
+
+    if (recommendationItems.length === 0) {
+      simRecommendationList.innerHTML =
+        '<div class="sim-empty">현재 선택 기준에서는 바로 절감으로 이어지는 추천 협상안이 아직 없습니다.</div>';
+    } else {
+      recommendationItems.forEach((entry, index) => {
+        const currentReference = getActiveReference(entry.processName);
+        const title =
+          entry.action === "off"
+            ? `${entry.processName} 공정 제외 검토`
+            : `${entry.processName} ${getGradeLabel(selectedGrades[entry.processName])} → ${getGradeLabel(
+                entry.nextGradeKey
+              )}`;
+        const copy =
+          entry.action === "off"
+            ? `${entry.processName} 공정을 이번 범위에서 빼거나 분리 발주하는 시나리오입니다. ${pyeong}평 기준 약 ${formatManwon(
+                Math.abs(entry.deltaWon)
+              )} 절감 가능성이 있습니다.`
+            : `${getReferenceLabel(currentReference)} 기준에서 한 단계 낮추는 시나리오입니다. ${pyeong}평 기준 약 ${formatManwon(
+                Math.abs(entry.deltaWon)
+              )} 절감 가능성이 있습니다.`;
+
+        const card = document.createElement("article");
+        card.className = "sim-recommendation-card";
+        card.innerHTML = `
+          <div class="sim-recommendation-head">
+            <span class="sim-recommendation-rank">${index + 1}</span>
+            <span class="sim-badge">추천안</span>
+          </div>
+          <h3 class="sim-recommendation-title">${escapeHtml(title)}</h3>
+          <p class="sim-recommendation-copy">${escapeHtml(copy)}</p>
+          <p class="sim-recommendation-ask">${escapeHtml(getRecommendationAsk(entry))}</p>
+        `;
+        simRecommendationList.appendChild(card);
+      });
+    }
+
+    scenarioEntries
+      .sort((a, b) => {
+        if (a.deltaWon !== b.deltaWon) {
+          return a.deltaWon - b.deltaWon;
+        }
+        return a.processName.localeCompare(b.processName, "ko");
+      })
+      .forEach((entry) => {
+        const { processName, outcome, deltaWon } = entry;
+
+      const currentReference = getActiveReference(processName);
+      const currentGradeKey = selectedGrades[processName];
+      const card = document.createElement("article");
+      card.className = "sim-scenario-card";
+
+      const optionsMarkup = buildSimulationOptions(processName)
+        .map((option) => {
+          const selected = option.value === ensureSimulationChoice(processName) ? "selected" : "";
+          return `<option value="${option.value}" ${selected}>${option.label}</option>`;
+        })
+        .join("");
+
+      const nextLabel =
+        outcome.action === "off"
+          ? "이번 범위에서 제외 검토"
+          : `${getGradeLabel(outcome.nextGradeKey)} · ${getReferenceLabel(outcome.nextReference)}`;
+
+      card.innerHTML = `
+        <div class="sim-scenario-head">
+          <div>
+            <h3 class="sim-scenario-title">${escapeHtml(processName)}</h3>
+            <p class="sim-scenario-meta">현재 ${escapeHtml(
+              `${getGradeLabel(currentGradeKey)} · ${getReferenceLabel(currentReference)}`
+            )}</p>
+          </div>
+          <span class="sim-badge">${escapeHtml(outcome.label)}</span>
+        </div>
+        <div class="sim-scenario-body">
+          <div class="sim-select-row">
+            <label for="sim-choice-${processName}">시나리오</label>
+            <select
+              id="sim-choice-${processName}"
+              class="sim-select"
+              data-role="sim-choice"
+              data-process="${processName}"
+            >
+              ${optionsMarkup}
+            </select>
+          </div>
+          <div class="sim-scenario-stats">
+            <div class="sim-stat">
+              <span class="sim-stat-label">현재 기준</span>
+              <div class="sim-stat-value">${escapeHtml(
+                `${formatWon(currentReference.priceMin)} ~ ${formatWon(
+                  currentReference.priceMax
+                )} / 평`
+              )}</div>
+            </div>
+            <div class="sim-stat">
+              <span class="sim-stat-label">시뮬레이션 결과</span>
+              <div class="sim-stat-value">${escapeHtml(nextLabel)}</div>
+            </div>
+          </div>
+          <p class="sim-copy">${escapeHtml(
+            `${outcome.copy} ${pyeong}평 기준 예상 차이는 ${
+              deltaWon === 0
+                ? "변동 없음"
+                : `${deltaWon < 0 ? "-" : "+"}${formatManwon(Math.abs(deltaWon))}`
+            }입니다.`
+          )}</p>
+        </div>
+      `;
+        simScenarioList.appendChild(card);
+
+        if (outcome.action !== "keep") {
+          changedItems.push({
+            processName,
+            outcome,
+            currentReference,
+            deltaWon,
+          });
+        }
+      });
+
+    const totalDelta = nextTotal - currentTotal;
+    simCurrentTotal.textContent = formatManwon(currentTotal);
+    simNextTotal.textContent = formatManwon(nextTotal);
+    simDeltaTotal.textContent =
+      totalDelta === 0
+        ? "변동 없음"
+        : `${totalDelta < 0 ? "-" : "+"}${formatManwon(Math.abs(totalDelta))}`;
+    simDeltaTotal.className = "sim-amount";
+    if (totalDelta < 0) {
+      simDeltaTotal.classList.add("is-saving");
+    } else if (totalDelta > 0) {
+      simDeltaTotal.classList.add("is-costly");
+    }
+
+    simDeltaCopy.textContent =
+      totalDelta < 0
+        ? `현재 조건 대비 약 ${formatManwon(
+            Math.abs(totalDelta)
+          )} 절감 가능한 시나리오입니다. 절감폭이 큰 공정부터 실제 스펙 차이를 확인하세요.`
+        : totalDelta > 0
+          ? `현재 조건보다 약 ${formatManwon(
+              totalDelta
+            )} 증가하는 시나리오입니다. 업그레이드가 꼭 필요한지 근거를 받아두는 편이 안전합니다.`
+          : "현재 선택 기준과 동일한 총액입니다. 한 단계 낮추기나 제외 검토를 적용하면 절감 차이를 바로 볼 수 있습니다.";
+
+    if (changedItems.length === 0) {
+      simScriptList.innerHTML =
+        "<li>시나리오를 바꾸면 그 항목에 맞는 협상 문장이 자동으로 정리됩니다.</li>";
+    } else {
+      changedItems
+        .sort((a, b) => Math.abs(b.deltaWon) - Math.abs(a.deltaWon))
+        .forEach((entry) => {
+          const item = document.createElement("li");
+          const question = getRecommendationAsk({
+            processName: entry.processName,
+            action: entry.outcome.action,
+            nextGradeKey: entry.outcome.nextGradeKey,
+          });
+          item.textContent = `${entry.processName}: ${question}`;
+          simScriptList.appendChild(item);
+        });
+    }
+
+    simScenarioList.querySelectorAll('[data-role="sim-choice"]').forEach((element) => {
+      element.addEventListener("change", function (event) {
+        const processName = event.target.dataset.process;
+        simulationChoices[processName] = event.target.value;
+        renderNegotiationSimulator();
+      });
+    });
   }
 
   function renderSelectionSummary() {
@@ -965,6 +1840,7 @@
     estimateDetail.textContent = `${pyeong}평 기준, 선택한 ${activeCount}개 공정의 세부 기준을 합산한 참고 범위입니다.`;
     updateTotalVerdict(result.verdict);
     renderMeetingReport();
+    renderNegotiationSimulator();
   }
 
   function renderMeetingReport() {
@@ -1048,6 +1924,10 @@
     renderProcessGrid();
     renderQuestions();
     renderOmissionChecklist();
+    renderHiddenConstructionChecks();
+    renderMeasurementChecks();
+    renderSpecFocus();
+    renderSpecGlossary();
     renderSelectionSummary();
     renderAuditSummary();
     updateEstimate();
@@ -1069,6 +1949,9 @@
     renderOmissionChecklist();
     renderMeetingReport();
   });
+  specSearchInput?.addEventListener("input", renderSpecGlossary);
+  specFilterActive?.addEventListener("change", renderSpecGlossary);
 
+  initMenuTabs();
   renderAll();
 })();

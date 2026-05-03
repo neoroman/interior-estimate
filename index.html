@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>인테리어 견적 해독기</title>
+    <title>견적봄</title>
     <meta
       name="description"
       content="평수와 자재 등급을 기준으로 인테리어 견적 적정 범위를 빠르게 확인하는 모바일 우선 도구"
@@ -14,7 +14,7 @@
     <div class="page-shell">
       <header class="hero">
         <p class="eyebrow">Meeting Prep Tool</p>
-        <h1>인테리어 견적 해독기</h1>
+        <h1>견적봄</h1>
         <p class="hero-copy">
           공정별 자재 수준을 고르면 예상 견적 범위와 미팅 질문 목록을 바로 확인할 수 있습니다.
         </p>
@@ -23,14 +23,139 @@
         </div>
       </header>
 
-      <main class="layout">
-        <section class="panel input-panel" aria-labelledby="calculator-title">
+      <section class="menu-tabs panel">
+        <div class="menu-tab-list" role="tablist" aria-label="전체 메뉴 탭">
+          <button
+            type="button"
+            class="menu-tab-button"
+            id="menu-input-tab"
+            role="tab"
+            aria-selected="true"
+            aria-controls="menu-input-panel"
+            data-menu-tab="input"
+          >
+            견적 계산
+          </button>
+          <button
+            type="button"
+            class="menu-tab-button"
+            id="menu-omission-tab"
+            role="tab"
+            aria-selected="false"
+            aria-controls="menu-omission-panel"
+            data-menu-tab="omission"
+            tabindex="-1"
+          >
+            누락 체크
+          </button>
+          <button
+            type="button"
+            class="menu-tab-button"
+            id="menu-prep-tab"
+            role="tab"
+            aria-selected="false"
+            aria-controls="menu-prep-panel"
+            data-menu-tab="prep"
+            tabindex="-1"
+          >
+            상담 준비
+          </button>
+          <button
+            type="button"
+            class="menu-tab-button"
+            id="menu-hidden-tab"
+            role="tab"
+            aria-selected="false"
+            aria-controls="menu-hidden-panel"
+            data-menu-tab="hidden"
+            tabindex="-1"
+          >
+            시공 체크
+          </button>
+          <button
+            type="button"
+            class="menu-tab-button"
+            id="menu-measurement-tab"
+            role="tab"
+            aria-selected="false"
+            aria-controls="menu-measurement-panel"
+            data-menu-tab="measurement"
+            tabindex="-1"
+          >
+            실측 체크
+          </button>
+          <button
+            type="button"
+            class="menu-tab-button"
+            id="menu-spec-tab"
+            role="tab"
+            aria-selected="false"
+            aria-controls="menu-spec-panel"
+            data-menu-tab="spec"
+            tabindex="-1"
+          >
+            스펙·용어
+          </button>
+          <button
+            type="button"
+            class="menu-tab-button"
+            id="menu-sim-tab"
+            role="tab"
+            aria-selected="false"
+            aria-controls="menu-sim-panel"
+            data-menu-tab="sim"
+            tabindex="-1"
+          >
+            협상 시뮬레이터
+          </button>
+          <button
+            type="button"
+            class="menu-tab-button"
+            id="menu-ai-tab"
+            role="tab"
+            aria-selected="false"
+            aria-controls="menu-ai-panel"
+            data-menu-tab="ai"
+            tabindex="-1"
+          >
+            AI 견적 체크
+          </button>
+        </div>
+
+        <section
+          class="menu-tab-panel input-panel"
+          id="menu-input-panel"
+          role="tabpanel"
+          aria-labelledby="menu-input-tab"
+          data-menu-panel="input"
+        >
           <div class="panel-heading">
-            <p class="section-kicker">STEP 1</p>
+            <p class="section-kicker">CALCULATOR</p>
             <h2 id="calculator-title">견적 범위 계산</h2>
             <p class="field-note">
               15개 공정에서 실제 적용할 공정만 켜고, 자재 수준과 받은 단가를 같이 넣어보세요.
             </p>
+          </div>
+
+          <div class="input-result-grid">
+            <div class="result-card">
+              <p class="result-label">예상 총액 범위</p>
+              <p id="estimate-range" class="estimate-range">-</p>
+              <p id="estimate-detail" class="estimate-detail">
+                지역·현장 조건에 따라 변동될 수 있습니다.
+              </p>
+            </div>
+
+            <div class="verdict-card">
+              <div class="verdict-head">
+                <p class="result-label">판단</p>
+                <span class="mini-disclaimer">참고용</span>
+              </div>
+              <p id="verdict-badge" class="verdict-badge verdict-pending">총액 입력 대기</p>
+              <p id="verdict-copy" class="estimate-detail">
+                총액을 입력하면 예상 범위와 비교한 판단이 표시됩니다.
+              </p>
+            </div>
           </div>
 
           <div class="control-stack">
@@ -83,264 +208,429 @@
               </div>
               <p class="field-note">비워두면 적정/비쌈/싸다 판단은 생략됩니다.</p>
             </div>
+
+            <div class="input-summary-grid">
+              <div class="selection-summary">
+                <p class="result-label">현재 선택한 자재</p>
+                <ul id="selection-list" class="selection-list"></ul>
+              </div>
+
+              <div class="selection-summary">
+                <p class="result-label">공정별 단가 판정</p>
+                <div id="audit-summary-copy" class="estimate-detail">
+                  단가를 입력하면 자재 기준 범위와 비교한 판정이 표시됩니다.
+                </div>
+                <ul id="audit-list" class="selection-list"></ul>
+              </div>
+            </div>
           </div>
         </section>
 
-        <aside class="panel result-panel" aria-labelledby="result-title">
+        <section
+          class="menu-tab-panel omission-panel"
+          id="menu-omission-panel"
+          role="tabpanel"
+          aria-labelledby="menu-omission-tab"
+          data-menu-panel="omission"
+          hidden
+        >
           <div class="panel-heading">
-            <p class="section-kicker">STEP 2</p>
-            <h2 id="result-title">예상 결과</h2>
-          </div>
-
-          <div class="result-card">
-            <p class="result-label">예상 총액 범위</p>
-            <p id="estimate-range" class="estimate-range">-</p>
-            <p id="estimate-detail" class="estimate-detail">
-              지역·현장 조건에 따라 변동될 수 있습니다.
+            <p class="section-kicker">CHECK</p>
+            <h2 id="omission-title">공정 누락 체크리스트</h2>
+            <p class="field-note">
+              선택한 공정과 붙여넣은 견적서 텍스트를 기준으로,
+              이 견적에 보통 들어가야 할 항목을 자동 점검합니다.
             </p>
           </div>
 
-          <div class="verdict-card">
-            <div class="verdict-head">
-              <p class="result-label">판단</p>
-              <span class="mini-disclaimer">참고용</span>
-            </div>
-            <p id="verdict-badge" class="verdict-badge verdict-pending">총액 입력 대기</p>
-            <p id="verdict-copy" class="estimate-detail">
-              총액을 입력하면 예상 범위와 비교한 판단이 표시됩니다.
+          <div id="omission-summary-copy" class="estimate-detail">
+            공정을 선택하면 등급을 몰라도 먼저 확인해야 할 기본 항목을 자동으로 정리합니다.
+          </div>
+          <div id="omission-list" class="omission-list" aria-live="polite"></div>
+        </section>
+
+        <section
+          class="menu-tab-panel prep-panel"
+          id="menu-prep-panel"
+          role="tabpanel"
+          aria-labelledby="menu-prep-tab"
+          data-menu-panel="prep"
+          hidden
+        >
+          <div class="panel-heading">
+            <p class="section-kicker">PREP</p>
+            <h2 id="meeting-report-title">상담 준비</h2>
+            <p class="field-note">
+              이번 미팅에서 먼저 물어볼 핵심 항목, 공통 체크리스트, 공정별 상세 질문을 한 곳에서 정리합니다.
             </p>
           </div>
-
-          <div class="selection-summary">
-            <p class="result-label">현재 선택한 자재</p>
-            <ul id="selection-list" class="selection-list"></ul>
-          </div>
-
-          <div class="selection-summary">
-            <p class="result-label">공정별 단가 판정</p>
-            <div id="audit-summary-copy" class="estimate-detail">
-              단가를 입력하면 자재 기준 범위와 비교한 판정이 표시됩니다.
-            </div>
-            <ul id="audit-list" class="selection-list"></ul>
-          </div>
-        </aside>
-      </main>
-
-      <section class="panel omission-panel" aria-labelledby="omission-title">
-        <div class="panel-heading">
-          <p class="section-kicker">AUTO CHECK</p>
-          <h2 id="omission-title">공정 누락 체크리스트</h2>
-          <p class="field-note">
-            선택한 공정과 붙여넣은 견적서 텍스트를 기준으로,
-            이 견적에 보통 들어가야 할 항목을 자동 점검합니다.
-          </p>
-        </div>
-
-        <div id="omission-summary-copy" class="estimate-detail">
-          공정을 선택하면 보통 확인해야 할 항목을 자동으로 정리합니다.
-        </div>
-        <div id="omission-list" class="omission-list" aria-live="polite"></div>
-      </section>
-
-      <section class="panel prep-panel" aria-labelledby="meeting-report-title">
-        <div class="panel-heading">
-          <p class="section-kicker">STEP 3</p>
-          <h2 id="meeting-report-title">상담 준비</h2>
-          <p class="field-note">
-            이번 미팅에서 먼저 물어볼 핵심 항목, 공통 체크리스트, 공정별 상세 질문을 한 곳에서 정리합니다.
-          </p>
-        </div>
-        <div class="prep-block">
-          <div class="prep-block-head">
-            <h3>이번 미팅에서 꼭 확인할 7가지</h3>
-            <p class="estimate-detail">
-              선택한 공정, 자재 기준, 입력 단가, 총액, 견적서 텍스트를 합쳐 우선순위가 높은 항목부터 보여줍니다.
-            </p>
-          </div>
-          <div id="meeting-report-summary" class="estimate-detail">
-            조건을 입력하면 이번 미팅에서 먼저 확인해야 할 포인트를 자동 요약합니다.
-          </div>
-          <div id="meeting-report-list" class="meeting-report-list" aria-live="polite"></div>
-          <details id="meeting-report-more" class="meeting-report-more">
-            <summary>추가 확인사항 더 보기</summary>
-            <div id="meeting-report-more-summary" class="estimate-detail">
-              핵심 항목 외에 더 확인해두면 좋은 내용이 여기에 정리됩니다.
-            </div>
-            <div id="meeting-report-more-list" class="meeting-report-list"></div>
-          </details>
-        </div>
-
-        <div class="prep-block">
-          <div class="prep-block-head">
-            <h3>빠른 체크리스트</h3>
-            <p class="estimate-detail">
-              업체와 상담할 때 거의 항상 확인해야 하는 공통 항목입니다.
-            </p>
-          </div>
-          <ul class="checklist">
-            <li>각 공정에서 어떤 등급과 브랜드의 자재를 쓰는지 물어보기</li>
-            <li>시공비와 자재비를 분리한 항목별 견적서 요청하기</li>
-            <li>자재값 인상 주장 시 어떤 자재가 언제 얼마나 올랐는지 확인하기</li>
-            <li>등급을 한 단계 낮췄을 때 절감되는 금액 질문하기</li>
-            <li>철거, 전기, 설비 금액을 각각 분리해서 요청하기</li>
-            <li>보증 범위와 하자 처리 기간 확인하기</li>
-            <li>견적서에 적힌 브랜드와 모델명이 실제 시공 제품과 동일한지 확인하기</li>
-            <li>변동 가능 항목은 무엇이고, 변경 시 어떤 방식으로 추가 견적서를 주는지 확인하기</li>
-          </ul>
-        </div>
-
-        <div class="prep-block">
-          <div class="prep-block-head">
-            <h3 id="questions-title">공정별 상세 질문</h3>
-            <p class="estimate-detail">
-              선택한 공정과 등급 기준에 따라 바로 꺼내 쓸 수 있는 세부 질문입니다.
-            </p>
-          </div>
-          <div id="question-list" class="question-list"></div>
-        </div>
-      </section>
-
-      <section class="panel ai-panel" aria-labelledby="ai-title">
-        <div class="panel-heading">
-          <p class="section-kicker">STEP 4 · AI</p>
-          <h2 id="ai-title">견적서 리스크 탐지</h2>
-          <p class="field-note">받은 견적서 전체를 붙여넣으면 AI가 가격 이상·범위 모호·누락 항목·협상 포인트를 찾아드립니다.</p>
-        </div>
-
-        <div class="api-key-row">
-          <label for="api-key-input" class="api-key-label">Anthropic API 키</label>
-          <div class="api-key-field">
-            <input
-              id="api-key-input"
-              type="password"
-              placeholder="sk-ant-..."
-              autocomplete="off"
-            />
-            <button id="save-key-btn" type="button" class="save-key-btn">저장</button>
-          </div>
-          <span id="key-status" class="key-status"></span>
-          <p class="field-note">키는 이 기기의 브라우저에만 저장됩니다. 서버로 전송되지 않습니다.</p>
-        </div>
-
-        <div class="field">
-          <label for="estimate-text">받은 견적서 내용</label>
-          <textarea
-            id="estimate-text"
-            class="estimate-textarea"
-            placeholder="견적서 텍스트를 여기에 붙여넣으세요.&#10;형식은 자유지만, 아래처럼 적어주면 더 잘 읽습니다.&#10;&#10;[공정] 철거 / 전체 철거 / 220만원&#10;[공정] 창호 / LX 뷰프레임 250S / 700만원&#10;[공정] 도배 / LX Z:IN 베스트 82559-01 / 85만원&#10;&#10;브랜드, 모델명, 수량, 평수, 일식 여부, 포함/제외 항목이 보이면 좋습니다."
-            rows="8"
-          ></textarea>
-        </div>
-
-        <div class="analyze-row">
-          <button id="demo-btn" type="button" class="demo-btn">⚡ 데모 체험하기</button>
-          <button id="analyze-btn" type="button" class="analyze-btn">분석하기</button>
-          <button id="stop-btn" type="button" class="stop-btn" disabled>중단하기</button>
-        </div>
-
-        <pre id="ai-result" class="ai-result" aria-live="polite" aria-label="AI 분석 결과"></pre>
-      </section>
-
-      <section class="panel roadmap-panel" aria-labelledby="roadmap-title">
-        <div class="panel-heading">
-          <p class="section-kicker">COMING SOON</p>
-          <h2 id="roadmap-title">다음 기능 로드맵</h2>
-        </div>
-
-        <div class="roadmap-grid">
-          <div class="roadmap-card">
-            <div class="roadmap-icon">💬</div>
-            <div class="roadmap-body">
-              <h3 class="roadmap-title">대화형 공정 추천</h3>
-              <p class="roadmap-desc">
-                "집이 10년 됐고 욕실에 곰팡이가 있어요"처럼 상황을 말하면
-                AI가 질문하면서 15개 공정의 등급을 자동으로 설정해줍니다.
+          <div class="prep-block">
+            <div class="prep-block-head">
+              <h3>이번 미팅에서 꼭 확인할 7가지</h3>
+              <p class="estimate-detail">
+                선택한 공정, 자재 기준, 입력 단가, 총액, 견적서 텍스트를 합쳐 우선순위가 높은 항목부터 보여줍니다.
               </p>
             </div>
-            <span class="coming-soon-badge">준비 중</span>
+            <div id="meeting-report-summary" class="estimate-detail">
+              조건을 입력하면 이번 미팅에서 먼저 확인해야 할 포인트를 자동 요약합니다.
+            </div>
+            <div id="meeting-report-list" class="meeting-report-list" aria-live="polite"></div>
+            <details id="meeting-report-more" class="meeting-report-more">
+              <summary>추가 확인사항 더 보기</summary>
+              <div id="meeting-report-more-summary" class="estimate-detail">
+                핵심 항목 외에 더 확인해두면 좋은 내용이 여기에 정리됩니다.
+              </div>
+              <div id="meeting-report-more-list" class="meeting-report-list"></div>
+            </details>
           </div>
 
-          <div class="roadmap-card">
-            <div class="roadmap-icon">📷</div>
-            <div class="roadmap-body">
-              <h3 class="roadmap-title">사진 분석 → 공정 자동 추정</h3>
-              <p class="roadmap-desc">
-                아파트 현재 상태 사진을 올리면 AI가 도배·바닥·욕실 타일
-                상태를 파악해서 필요한 공정과 등급을 자동 판단합니다.
+          <div class="prep-block">
+            <div class="prep-block-head">
+              <h3>빠른 체크리스트</h3>
+              <p class="estimate-detail">
+                업체와 상담할 때 거의 항상 확인해야 하는 공통 항목입니다.
               </p>
             </div>
-            <span class="coming-soon-badge">준비 중</span>
+            <ul class="checklist">
+              <li>각 공정에서 어떤 등급과 브랜드의 자재를 쓰는지 물어보기</li>
+              <li>시공비와 자재비를 분리한 항목별 견적서 요청하기</li>
+              <li>자재값 인상 주장 시 어떤 자재가 언제 얼마나 올랐는지 확인하기</li>
+              <li>등급을 한 단계 낮췄을 때 절감되는 금액 질문하기</li>
+              <li>철거, 전기, 설비 금액을 각각 분리해서 요청하기</li>
+              <li>보증 범위와 하자 처리 기간 확인하기</li>
+              <li>견적서에 적힌 브랜드와 모델명이 실제 시공 제품과 동일한지 확인하기</li>
+              <li>변동 가능 항목은 무엇이고, 변경 시 어떤 방식으로 추가 견적서를 주는지 확인하기</li>
+            </ul>
           </div>
 
-          <div class="roadmap-card">
-            <div class="roadmap-icon">⚖️</div>
-            <div class="roadmap-body">
-              <h3 class="roadmap-title">견적 비교 · 리스크 탐지 강화</h3>
-              <ul class="roadmap-list">
-                <li>A/B 업체 견적을 공정별 차이, 누락 항목, 과도한 구간까지 나란히 비교</li>
-                <li>양중비, 폐기물, 실측 후 증액, 사다리차, 보양, 철거 후 보수 같은 숨은 추가비 경고</li>
-                <li>좋은 견적, 애매한 견적, 위험한 견적을 점수와 근거로 한눈에 요약</li>
-              </ul>
+          <div class="prep-block">
+            <div class="prep-block-head">
+              <h3>디자인 미팅 때 참고할 생활 체크</h3>
+              <p class="estimate-detail">
+                실측 현장에서 다 보기 어려운 내용은 디자인 미팅에서 생활 방식 기준으로 정리하는 편이 더 정확합니다.
+              </p>
             </div>
-            <span class="coming-soon-badge">우선순위 높음</span>
+            <ul class="checklist">
+              <li>침대, 소파, 식탁, 냉장고, 세탁기 같은 큰 가구·가전이 들어왔을 때 답답하지 않은 배치인지 이야기하기</li>
+              <li>현관문, 방문, 중문, 냉장고 문, 붙박이장 문, 욕실문이 서로 간섭 없게 열리도록 요청하기</li>
+              <li>침대 옆, 소파 옆, 식탁 주변, 청소기 자리, 정수기 자리의 콘센트와 스위치 위치를 생활 기준으로 정하기</li>
+              <li>신발장, 팬트리, 주방 서랍, 욕실장, 세탁실 선반이 내 물건 기준으로 충분한지 먼저 설명하기</li>
+              <li>싱크 높이, 조리대 폭, 상부장 높이처럼 매일 쓰는 주방 기준을 내 키와 습관에 맞춰 요청하기</li>
+              <li>세면대 높이, 샤워 공간, 수건걸이, 휴지걸이, 욕실장 위치를 실제 사용 동선 중심으로 맞춰달라고 요청하기</li>
+              <li>거실, 침실, 주방 조명을 한 번에 켤지 나눠 켤지, 간접조명이 필요한지 생활 패턴 기준으로 정하기</li>
+              <li>분전반, 인터넷 단자함, 보일러, 배관, 점검구 중 어디까지 가리고 어디는 열어둘지 미리 결정하기</li>
+              <li>청소가 쉬운 마감인지, 먼지·물때·손자국이 잘 남지 않는지 유지관리 관점으로 자재를 고르기</li>
+            </ul>
           </div>
 
-          <div class="roadmap-card">
-            <div class="roadmap-icon">📍</div>
-            <div class="roadmap-body">
-              <h3 class="roadmap-title">지역 · 주거형태 보정</h3>
-              <ul class="roadmap-list">
-                <li>서울·수도권·지방, 구축·신축, 아파트·빌라 조건별 기준가 자동 보정</li>
-                <li>평형, 공사 범위, 예산, 우선순위를 저장하는 내 집 프로필과 연동</li>
-                <li>총 예산 3천·5천·8천 기준의 공정별 예산 배분 가이드 제공</li>
-              </ul>
+          <div class="prep-block">
+            <div class="prep-block-head">
+              <h3 id="questions-title">공정별 상세 질문</h3>
+              <p class="estimate-detail">
+                선택한 공정과 등급 기준에 따라 바로 꺼내 쓸 수 있는 세부 질문입니다.
+              </p>
             </div>
-            <span class="coming-soon-badge">준비 중</span>
+            <div id="question-list" class="question-list"></div>
+          </div>
+        </section>
+
+        <section
+          class="menu-tab-panel hidden-check-panel"
+          id="menu-hidden-panel"
+          role="tabpanel"
+          aria-labelledby="menu-hidden-tab"
+          data-menu-panel="hidden"
+          hidden
+        >
+          <div class="panel-heading">
+            <p class="section-kicker">SITE CHECK</p>
+            <h2 id="hidden-check-title">말 안하면 빠지는 시공 체크리스트</h2>
+            <p class="field-note">
+              현관, 거실, 주방, 욕실에서 시공 전에 먼저 말해둬야 하는 항목을 정리했습니다.
+            </p>
           </div>
 
-          <div class="roadmap-card">
-            <div class="roadmap-icon">📄</div>
-            <div class="roadmap-body">
-              <h3 class="roadmap-title">업로드 · 자동 구조화</h3>
-              <ul class="roadmap-list">
-                <li>견적서 OCR/PDF 업로드로 텍스트 붙여넣기 없이 바로 분석 시작</li>
-                <li>선택 공정 기준으로 보통 들어가야 할 누락 체크리스트 자동 생성</li>
-                <li>브랜드·모델명이 정확한지, 애매한 표기인지, 저가 라인인지 신뢰도 표시</li>
-              </ul>
+          <div id="hidden-check-summary" class="estimate-detail">
+            공정 선택과 상관없이 자주 놓치는 항목을 공간별로 확인할 수 있습니다.
+          </div>
+          <div id="hidden-check-list" class="hidden-check-list" aria-live="polite">
+          <article class="hidden-check-room">
+            <div class="hidden-check-head">
+              <div>
+                <h3>현관</h3>
+                <p>처음 들어올 때 체감이 큰 조명·수납·마감 포인트입니다.</p>
+              </div>
+              <span class="hidden-check-badge">공통 체크</span>
             </div>
-            <span class="coming-soon-badge">체감 효과 큼</span>
+            <ol class="hidden-check-items">
+              <li>조명 스위치 회로 분리. 어떤 조명을 묶을지 미리 정하기</li>
+              <li>현관 주변부 마감 방식 확인</li>
+              <li>일괄 소등 스위치 넣기</li>
+              <li>우유 투입구 막기 여부 확인</li>
+              <li>신발장 간접 조명 여부 확인</li>
+              <li>신발장 선반은 줄다보 찬넬처럼 이동 가능한 형식으로 가능한지 확인</li>
+            </ol>
+          </article>
+
+          <article class="hidden-check-room">
+            <div class="hidden-check-head">
+              <div>
+                <h3>거실</h3>
+                <p>배선, 수평·수직, 바닥, 커튼박스처럼 시공 전 결정해야 하는 항목들입니다.</p>
+              </div>
+              <span class="hidden-check-badge">공통 체크</span>
+            </div>
+            <ol class="hidden-check-items">
+              <li>콘센트, 인터넷 선 위치, 스위치, 기초 배선 위치 미리 확정</li>
+              <li>조명 회로 분리. 스위치를 적절히 나누기</li>
+              <li>벽면 기초 작업, 목공 기초 작업 수직·수평 맞추기</li>
+              <li>거실·주방·공용부 벽체와 붙박이 가구 들어가는 부분 수평 확인</li>
+              <li>바닥 셀프 레벨링 여부 확인</li>
+              <li>마루 시공 방향 미리 정하기</li>
+              <li>커튼 박스 크기 적절하게 확보하기. 20cm 기준 확인</li>
+              <li>우수관에 배관 단열재 감싸기</li>
+            </ol>
+          </article>
+
+          <article class="hidden-check-room">
+            <div class="hidden-check-head">
+              <div>
+                <h3>주방</h3>
+                <p>치수와 빌트인 공간을 먼저 고정하지 않으면 나중에 수정이 어렵습니다.</p>
+              </div>
+              <span class="hidden-check-badge">공통 체크</span>
+            </div>
+            <ol class="hidden-check-items">
+              <li>싱크대 높이 880~900mm 범위에서 사용자에게 맞는 높이 확인</li>
+              <li>빌트인 가전 공간 확보 여부 확인</li>
+              <li>음식물 처리기, 싱크볼, 하부장, 정수기 들어갈 자리까지 같이 체크</li>
+              <li>서랍 구성 포함 주방 수납 구성도 미리 소통</li>
+            </ol>
+          </article>
+
+          <article class="hidden-check-room">
+            <div class="hidden-check-head">
+              <div>
+                <h3>욕실</h3>
+                <p>타일 시작점, 설비 위치, 수납과 조명 위치는 시공 전에 안 잡으면 되돌리기 어렵습니다.</p>
+              </div>
+              <span class="hidden-check-badge">공통 체크</span>
+            </div>
+            <ol class="hidden-check-items">
+              <li>샤워 부스 파티션 여부 확인</li>
+              <li>세면대 높이 850~870mm 범위에서 편한 높이 직접 재보기</li>
+              <li>욕실 콘센트가 보이지 않게 설계 가능한지 확인. 욕실장 안쪽 배치 검토</li>
+              <li>센서등은 주 동선 위쪽으로 설치할지 설계 단계에서 소통</li>
+              <li>샤워볼 걸이 위치 확인</li>
+              <li>타일 시작점 체크</li>
+              <li>위시타워장 여부 확인</li>
+              <li>발코니 단열 확인</li>
+            </ol>
+          </article>
+          </div>
+        </section>
+
+        <section
+          class="menu-tab-panel measurement-panel"
+          id="menu-measurement-panel"
+          role="tabpanel"
+          aria-labelledby="menu-measurement-tab"
+          data-menu-panel="measurement"
+          hidden
+        >
+          <div class="panel-heading">
+            <p class="section-kicker">MEASUREMENT</p>
+            <h2 id="measurement-check-title">실측 체크리스트</h2>
+            <p class="field-note">
+              실측하러 갈 때 현장에서 바로 확인해야 하는 치수, 간섭, 설비 포인트를 공간별로 정리했습니다.
+            </p>
           </div>
 
-          <div class="roadmap-card">
-            <div class="roadmap-icon">🧾</div>
-            <div class="roadmap-body">
-              <h3 class="roadmap-title">스펙 사전 · 협상 시뮬레이터</h3>
-              <ul class="roadmap-list">
-                <li>"LX 뷰프레임 250S", "강마루", "PET 도어" 같은 표현을 쉬운 설명으로 번역</li>
-                <li>창호 한 단계 조정, 욕실 1개만 풀교체 같은 조건 변경 시 총액 차이 즉시 계산</li>
-                <li>업체에 바로 보낼 수 있는 카톡·문자용 질문 복사 모드 제공</li>
-              </ul>
-            </div>
-            <span class="coming-soon-badge">협상 지원</span>
+          <div id="measurement-check-summary" class="estimate-detail">
+            실측 전 준비물부터 공간별 핵심 치수까지, 현장에서 빠뜨리기 쉬운 항목을 먼저 확인하세요.
+          </div>
+          <div id="measurement-check-list" class="hidden-check-list" aria-live="polite"></div>
+        </section>
+
+        <section
+          class="menu-tab-panel spec-panel"
+          id="menu-spec-panel"
+          role="tabpanel"
+          aria-labelledby="menu-spec-tab"
+          data-menu-panel="spec"
+          hidden
+        >
+          <div class="panel-heading">
+            <p class="section-kicker">SPEC</p>
+            <h2 id="spec-title">스펙 · 용어 사전</h2>
+            <p class="field-note">
+              15개 공정을 기준으로 스펙과 용어를 더 읽기 쉽게 묶었습니다. 예를 들어 창호는 로이유리, 단열간봉, 시스템창호처럼 한 카테고리 안에서 같이 볼 수 있습니다.
+            </p>
           </div>
 
-          <div class="roadmap-card">
-            <div class="roadmap-icon">🤝</div>
-            <div class="roadmap-body">
-              <h3 class="roadmap-title">상담 준비 · 공유 · 이력 관리</h3>
-              <ul class="roadmap-list">
-                <li>미팅 전 저장, 링크 공유, PDF 출력으로 결과 재활용</li>
-                <li>업체별로 저장한 상담 리포트를 한 화면에서 비교하고 공유</li>
-                <li>1차 견적, 수정 견적, 최종 견적의 변경 이력을 비교하고 추적</li>
-              </ul>
+          <div class="spec-column">
+            <div class="spec-subhead">
+              <h3>공정별 핵심 스펙</h3>
+              <p class="estimate-detail">
+                현재 선택한 공정과 세부 기준을 바탕으로, 상담 전에 먼저 이해해두면 좋은 핵심 스펙을 공정별로 묶어서 보여줍니다.
+              </p>
             </div>
-            <span class="coming-soon-badge">다음 단계</span>
+            <div id="spec-focus-list" class="spec-focus-list" aria-live="polite"></div>
+
+            <div class="spec-subhead spec-search-head">
+              <div>
+                <h3>공정별 용어 사전</h3>
+                <p class="estimate-detail">
+                  견적서에 자주 나오는 표현을 공정별로 나눠서 보고, 바로 물어볼 질문까지 같이 준비하세요.
+                </p>
+              </div>
+              <label class="spec-search-field" for="spec-search-input">
+                <input
+                  id="spec-search-input"
+                  type="search"
+                  placeholder="예: 로이유리, 강마루, 일식, PET"
+                />
+              </label>
+            </div>
+            <label class="spec-filter-toggle">
+              <input id="spec-filter-active" type="checkbox" checked />
+              현재 선택한 공정 관련 용어만 우선 보기
+            </label>
+            <div id="spec-glossary-summary" class="estimate-detail">
+              선택한 공정 기준으로 관련 용어를 먼저 보여줍니다.
+            </div>
+            <div id="spec-glossary-list" class="spec-glossary-list" aria-live="polite"></div>
           </div>
-        </div>
+        </section>
+
+        <section
+          class="menu-tab-panel sim-panel"
+          id="menu-sim-panel"
+          role="tabpanel"
+          aria-labelledby="menu-sim-tab"
+          data-menu-panel="sim"
+          hidden
+        >
+          <div class="panel-heading">
+            <p class="section-kicker">NEGOTIATION</p>
+            <h2 id="sim-title">협상 시뮬레이터</h2>
+            <p class="field-note">
+              공정별로 유지, 한 단계 낮추기, 제외 검토를 바꿔보며 예상 중간 총액 차이와 바로 쓸 협상 문장을 따로 확인할 수 있습니다.
+            </p>
+          </div>
+
+          <div class="sim-layout">
+            <div class="spec-subhead">
+              <h3>추천 협상안 3개</h3>
+              <p class="estimate-detail">
+                현재 선택 기준에서 절감 효과가 큰 순서대로 바로 시도해볼 만한 협상안을 먼저 정리합니다.
+              </p>
+            </div>
+            <div id="sim-recommendation-list" class="sim-recommendation-list" aria-live="polite"></div>
+
+            <div class="spec-subhead">
+              <h3>총액 변화</h3>
+              <p class="estimate-detail">
+                등급 조정이나 제외 검토를 적용했을 때 현재 기준과 얼마나 차이 나는지 바로 보여줍니다.
+              </p>
+            </div>
+
+            <div class="sim-summary-grid">
+              <article class="sim-summary-card">
+                <p class="result-label">현재 기준 중간 총액</p>
+                <p id="sim-current-total" class="sim-amount">-</p>
+                <p class="estimate-detail">현재 선택한 세부 기준의 중간값 합산입니다.</p>
+              </article>
+              <article class="sim-summary-card">
+                <p class="result-label">시뮬레이션 총액</p>
+                <p id="sim-next-total" class="sim-amount">-</p>
+                <p class="estimate-detail">아래 시나리오를 적용했을 때의 예상 중간 총액입니다.</p>
+              </article>
+              <article class="sim-summary-card">
+                <p class="result-label">예상 차이</p>
+                <p id="sim-delta-total" class="sim-amount">-</p>
+                <p id="sim-delta-copy" class="estimate-detail">
+                  공정을 선택하면 절감 또는 증가 포인트를 자동으로 요약합니다.
+                </p>
+              </article>
+            </div>
+
+            <div class="spec-subhead">
+              <h3>공정별 시나리오 조정</h3>
+              <p class="estimate-detail">
+                절감 효과가 큰 공정부터 먼저 보이도록 정렬됩니다. 한 단계 낮추기 또는 제외 검토를 적용해보고, 빠지는 스펙을 바로 확인하세요.
+              </p>
+            </div>
+            <div id="sim-scenario-list" class="sim-scenario-list" aria-live="polite"></div>
+
+            <div class="spec-subhead">
+              <h3>협상할 때 바로 쓸 문장</h3>
+              <p class="estimate-detail">
+                시뮬레이션에서 바뀐 항목을 기준으로 바로 꺼내 쓸 수 있는 질문입니다.
+              </p>
+            </div>
+            <ul id="sim-script-list" class="selection-list"></ul>
+          </div>
+        </section>
+
+        <section
+          class="menu-tab-panel ai-panel"
+          id="menu-ai-panel"
+          role="tabpanel"
+          aria-labelledby="menu-ai-tab"
+          data-menu-panel="ai"
+          hidden
+        >
+          <div class="panel-heading">
+            <p class="section-kicker">AI</p>
+            <h2 id="ai-title">견적서 리스크 탐지</h2>
+            <p class="field-note">
+              받은 견적서 전체를 붙여넣으면 AI가 가격 이상, 범위 모호, 누락 항목, 협상 포인트를 찾아드립니다.
+            </p>
+          </div>
+
+          <div class="api-key-row">
+            <label for="api-key-input" class="api-key-label">Anthropic API 키</label>
+            <div class="api-key-field">
+              <input
+                id="api-key-input"
+                type="password"
+                placeholder="sk-ant-..."
+                autocomplete="off"
+              />
+              <button id="save-key-btn" type="button" class="save-key-btn">저장</button>
+            </div>
+            <span id="key-status" class="key-status"></span>
+            <p class="field-note">키는 이 기기의 브라우저에만 저장됩니다. 서버로 전송되지 않습니다.</p>
+          </div>
+
+          <div class="field">
+            <label for="estimate-text">받은 견적서 내용</label>
+            <textarea
+              id="estimate-text"
+              class="estimate-textarea"
+              placeholder="견적서 텍스트를 여기에 붙여넣으세요.&#10;형식은 자유지만, 아래처럼 적어주면 더 잘 읽습니다.&#10;&#10;[공정] 철거 / 전체 철거 / 220만원&#10;[공정] 창호 / LX 뷰프레임 250S / 700만원&#10;[공정] 도배 / LX Z:IN 베스트 82559-01 / 85만원&#10;&#10;브랜드, 모델명, 수량, 평수, 일식 여부, 포함/제외 항목이 보이면 좋습니다."
+              rows="8"
+            ></textarea>
+          </div>
+
+          <div class="analyze-row">
+            <button id="demo-btn" type="button" class="demo-btn">⚡ 데모 체험하기</button>
+            <button id="analyze-btn" type="button" class="analyze-btn">분석하기</button>
+            <button id="stop-btn" type="button" class="stop-btn" disabled>중단하기</button>
+          </div>
+
+          <pre id="ai-result" class="ai-result" aria-live="polite" aria-label="AI 분석 결과"></pre>
+        </section>
+
       </section>
+
     </div>
 
     <script src="./prices.js"></script>
+    <script src="./construction-checklist-data.js"></script>
+    <script src="./measurement-checklist-data.js"></script>
+    <script src="./spec-dictionary-data.js"></script>
     <script src="./grade-decoder.js"></script>
     <script src="./ai-analyzer.js"></script>
   </body>
