@@ -9,6 +9,12 @@
       content="평수와 자재 등급을 기준으로 인테리어 견적 적정 범위를 빠르게 확인하는 모바일 우선 도구"
     />
     <link rel="stylesheet" href="./styles.css" />
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#b85c38" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="견적봄" />
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
   </head>
   <body>
     <div class="page-shell">
@@ -680,5 +686,10 @@
     <script src="./spec-dictionary-data.js"></script>
     <script src="./grade-decoder.js"></script>
     <script src="./ai-analyzer.js"></script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js');
+      }
+    </script>
   </body>
 </html>
