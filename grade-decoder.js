@@ -20,6 +20,12 @@
   const meetingReportMoreList = document.getElementById("meeting-report-more-list");
   const hiddenCheckSummary = document.getElementById("hidden-check-summary");
   const hiddenCheckList = document.getElementById("hidden-check-list");
+  const customChecklistForm = document.getElementById("custom-checklist-form");
+  const customCategoryType = document.getElementById("custom-category-type");
+  const customCategoryName = document.getElementById("custom-category-name");
+  const customChecklistItem = document.getElementById("custom-checklist-item");
+  const customChecklistSummary = document.getElementById("custom-checklist-summary");
+  const customChecklistList = document.getElementById("custom-checklist-list");
   const measurementCheckSummary = document.getElementById("measurement-check-summary");
   const measurementCheckList = document.getElementById("measurement-check-list");
   const pyeongRange = document.getElementById("pyeong-range");
@@ -45,6 +51,7 @@
   const menuTabButtons = Array.from(document.querySelectorAll("[data-menu-tab]"));
   const menuTabPanels = Array.from(document.querySelectorAll("[data-menu-panel]"));
   const MENU_TAB_STORAGE_KEY = "interier-active-menu-tab";
+  const CUSTOM_CHECKLIST_STORAGE_KEY = "interier-custom-checklists";
 
   const processNames = Object.keys(window.prices);
   const selectedGrades = Object.fromEntries(
@@ -69,6 +76,7 @@
   const measurementChecklist = Array.isArray(window.measurementChecklist)
     ? window.measurementChecklist
     : [];
+  let customChecklists = loadCustomChecklists();
 
   function formatWon(value) {
     return `${Math.round(value).toLocaleString("ko-KR")}원`;
@@ -84,6 +92,64 @@
       return 33;
     }
     return Math.min(60, Math.max(10, numeric));
+  }
+
+  function createId() {
+    return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  }
+
+  function loadCustomChecklists() {
+    try {
+      const raw = window.localStorage.getItem(CUSTOM_CHECKLIST_STORAGE_KEY);
+      if (!raw) {
+        return [];
+      }
+
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) {
+        return [];
+      }
+
+      return parsed
+        .map((group) => ({
+          id: typeof group.id === "string" ? group.id : createId(),
+          type: ["space", "product", "custom"].includes(group.type) ? group.type : "custom",
+          name: typeof group.name === "string" ? group.name.trim() : "",
+          items: Array.isArray(group.items)
+            ? group.items
+                .map((item) => ({
+                  id: typeof item.id === "string" ? item.id : createId(),
+                  text: typeof item.text === "string" ? item.text.trim() : "",
+                  checked: Boolean(item.checked),
+                }))
+                .filter((item) => item.text !== "")
+            : [],
+        }))
+        .filter((group) => group.name !== "" && group.items.length > 0);
+    } catch (error) {
+      return [];
+    }
+  }
+
+  function saveCustomChecklists() {
+    try {
+      window.localStorage.setItem(
+        CUSTOM_CHECKLIST_STORAGE_KEY,
+        JSON.stringify(customChecklists)
+      );
+    } catch (error) {
+      // Ignore storage failures in private mode or embedded browsers.
+    }
+  }
+
+  function getChecklistTypeLabel(type) {
+    if (type === "space") {
+      return "공간";
+    }
+    if (type === "product") {
+      return "제품";
+    }
+    return "기타";
   }
 
   function activateMenuTab(tabName, options = {}) {
@@ -256,6 +322,208 @@
     return `이 등급의 기본 기준 대비 총액 ${sign}${formatManwon(
       Math.abs(impact.delta)
     )}`;
+  }
+
+  function renderCustomChecklists() {
+    if (!customChecklistList || !customChecklistSummary) {
+      return;
+    }
+
+    customChecklistList.innerHTML = "";
+
+    if (customChecklists.length === 0) {
+      customChecklistSummary.textContent =
+        "아직 저장한 개인 체크리스트가 없습니다. 공간이나 제품 카테고리를 만들고 필요한 항목을 추가해보세요.";
+      customChecklistList.innerHTML =
+        '<div class="spec-empty">예: 공간 `신발장`, 제품 `벽지`, 기타 `가전 배치`처럼 카테고리를 나눠 저장할 수 있습니다.</div>';
+      return;
+    }
+
+    const totalItems = customChecklists.reduce((count, group) => count + group.items.length, 0);
+    const checkedItems = customChecklists.reduce(
+      (count, group) => count + group.items.filter((item) => item.checked).length,
+      0
+    );
+
+    customChecklistSummary.textContent = `저장한 카테고리 ${customChecklists.length}개, 체크 항목 ${totalItems}개 중 ${checkedItems}개 완료했습니다.`;
+
+    customChecklists.forEach((group) => {
+      const card = document.createElement("article");
+      card.className = "custom-checklist-card";
+
+      const itemsMarkup = group.items
+        .map(
+          (item) => `
+            <li class="custom-checklist-item${item.checked ? " is-checked" : ""}">
+              <input
+                type="checkbox"
+                data-custom-action="toggle"
+                data-group-id="${escapeHtml(group.id)}"
+                data-item-id="${escapeHtml(item.id)}"
+                ${item.checked ? "checked" : ""}
+              />
+              <span class="custom-checklist-item-text">${escapeHtml(item.text)}</span>
+              <button
+                type="button"
+                class="custom-checklist-action"
+                data-custom-action="delete-item"
+                data-group-id="${escapeHtml(group.id)}"
+                data-item-id="${escapeHtml(item.id)}"
+              >
+                삭제
+              </button>
+            </li>
+          `
+        )
+        .join("");
+
+      card.innerHTML = `
+        <div class="custom-checklist-head">
+          <div>
+            <h3>${escapeHtml(group.name)}</h3>
+            <p class="custom-checklist-meta">항목 ${group.items.length}개</p>
+          </div>
+          <div class="custom-checklist-actions">
+            <span class="custom-checklist-badge">${escapeHtml(getChecklistTypeLabel(group.type))}</span>
+            <button
+              type="button"
+              class="custom-checklist-action"
+              data-custom-action="delete-group"
+              data-group-id="${escapeHtml(group.id)}"
+            >
+              카테고리 삭제
+            </button>
+          </div>
+        </div>
+        <ul class="custom-checklist-items">${itemsMarkup}</ul>
+      `;
+
+      customChecklistList.appendChild(card);
+    });
+  }
+
+  function addCustomChecklistItem() {
+    const type = customCategoryType?.value || "custom";
+    const categoryName = customCategoryName?.value.trim() || "";
+    const itemText = customChecklistItem?.value.trim() || "";
+
+    if (categoryName === "" || itemText === "") {
+      return;
+    }
+
+    const existingGroup = customChecklists.find(
+      (group) => group.type === type && group.name.toLowerCase() === categoryName.toLowerCase()
+    );
+
+    if (existingGroup) {
+      existingGroup.items.unshift({
+        id: createId(),
+        text: itemText,
+        checked: false,
+      });
+    } else {
+      customChecklists.unshift({
+        id: createId(),
+        type,
+        name: categoryName,
+        items: [
+          {
+            id: createId(),
+            text: itemText,
+            checked: false,
+          },
+        ],
+      });
+    }
+
+    saveCustomChecklists();
+    renderCustomChecklists();
+
+    if (customChecklistItem) {
+      customChecklistItem.value = "";
+    }
+    if (customCategoryName) {
+      customCategoryName.value = "";
+    }
+  }
+
+  function toggleCustomChecklistItem(groupId, itemId) {
+    customChecklists = customChecklists.map((group) => {
+      if (group.id !== groupId) {
+        return group;
+      }
+
+      return {
+        ...group,
+        items: group.items.map((item) =>
+          item.id === itemId ? { ...item, checked: !item.checked } : item
+        ),
+      };
+    });
+
+    saveCustomChecklists();
+    renderCustomChecklists();
+  }
+
+  function deleteCustomChecklistItem(groupId, itemId) {
+    customChecklists = customChecklists
+      .map((group) => {
+        if (group.id !== groupId) {
+          return group;
+        }
+
+        return {
+          ...group,
+          items: group.items.filter((item) => item.id !== itemId),
+        };
+      })
+      .filter((group) => group.items.length > 0);
+
+    saveCustomChecklists();
+    renderCustomChecklists();
+  }
+
+  function deleteCustomChecklistGroup(groupId) {
+    customChecklists = customChecklists.filter((group) => group.id !== groupId);
+    saveCustomChecklists();
+    renderCustomChecklists();
+  }
+
+  function initCustomChecklistControls() {
+    customChecklistForm?.addEventListener("submit", (event) => {
+      event.preventDefault();
+      addCustomChecklistItem();
+    });
+
+    customChecklistList?.addEventListener("click", (event) => {
+      const target = event.target.closest("[data-custom-action]");
+      if (!target) {
+        return;
+      }
+
+      const action = target.dataset.customAction;
+      const groupId = target.dataset.groupId;
+      const itemId = target.dataset.itemId;
+
+      if (action === "delete-item" && groupId && itemId) {
+        deleteCustomChecklistItem(groupId, itemId);
+      } else if (action === "delete-group" && groupId) {
+        deleteCustomChecklistGroup(groupId);
+      }
+    });
+
+    customChecklistList?.addEventListener("change", (event) => {
+      const target = event.target.closest("[data-custom-action='toggle']");
+      if (!target) {
+        return;
+      }
+
+      const groupId = target.dataset.groupId;
+      const itemId = target.dataset.itemId;
+      if (groupId && itemId) {
+        toggleCustomChecklistItem(groupId, itemId);
+      }
+    });
   }
 
   function getProcessAudit(processName) {
@@ -1925,6 +2193,7 @@
     renderQuestions();
     renderOmissionChecklist();
     renderHiddenConstructionChecks();
+    renderCustomChecklists();
     renderMeasurementChecks();
     renderSpecFocus();
     renderSpecGlossary();
@@ -1953,5 +2222,6 @@
   specFilterActive?.addEventListener("change", renderSpecGlossary);
 
   initMenuTabs();
+  initCustomChecklistControls();
   renderAll();
 })();

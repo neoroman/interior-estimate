@@ -428,6 +428,53 @@
             </ol>
           </article>
           </div>
+
+          <div class="custom-checklist-panel">
+            <div class="prep-block-head">
+              <h3>내 체크리스트 추가</h3>
+              <p class="estimate-detail">
+                사람마다 필요한 확인 항목을 공간이나 제품 기준으로 따로 저장해두고 계속 관리할 수 있습니다.
+              </p>
+            </div>
+
+            <form id="custom-checklist-form" class="custom-checklist-form">
+              <label class="field">
+                <span class="result-label">카테고리 유형</span>
+                <select id="custom-category-type" class="reference-select">
+                  <option value="space">공간</option>
+                  <option value="product">제품</option>
+                  <option value="custom">기타</option>
+                </select>
+              </label>
+
+              <label class="field">
+                <span class="result-label">카테고리 이름</span>
+                <input
+                  id="custom-category-name"
+                  class="reference-select"
+                  type="text"
+                  placeholder="예: 신발장, 안방, 주방, 벽지, 붙박이장"
+                />
+              </label>
+
+              <label class="field custom-item-field">
+                <span class="result-label">체크 항목</span>
+                <textarea
+                  id="custom-checklist-item"
+                  class="estimate-textarea custom-checklist-textarea"
+                  rows="3"
+                  placeholder="예: 신발장 문 열림 간섭 없는지 확인, 벽지 샘플 실제 채광에서 보기"
+                ></textarea>
+              </label>
+
+              <button type="submit" class="analyze-btn custom-checklist-submit">체크 항목 저장</button>
+            </form>
+
+            <div id="custom-checklist-summary" class="estimate-detail">
+              아직 저장한 개인 체크리스트가 없습니다.
+            </div>
+            <div id="custom-checklist-list" class="hidden-check-list" aria-live="polite"></div>
+          </div>
         </section>
 
         <section

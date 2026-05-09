@@ -1,0 +1,65 @@
+<svg width="1280" height="860" viewBox="0 0 1280 860" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1280" height="860" rx="32" fill="#F5F1EA"/>
+  <rect x="44" y="44" width="1192" height="772" rx="28" fill="#FFFDF8" stroke="#E6DED2" stroke-width="2"/>
+
+  <text x="90" y="118" fill="#8A5A44" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif" font-size="22" font-weight="700">Interior Estimate Assistant</text>
+  <text x="90" y="170" fill="#1F1A17" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif" font-size="52" font-weight="800">견적봄 서비스 맵</text>
+  <text x="90" y="212" fill="#5F564E" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif" font-size="24" font-weight="500">인테리어 비교 견적 전후에 필요한 계산, 검토, 질문 준비를 한 화면 흐름으로 정리한 도구</text>
+
+  <rect x="90" y="268" width="220" height="108" rx="24" fill="#FFF4D8" stroke="#E3C27B" stroke-width="2"/>
+  <text x="120" y="314" fill="#8A5A00" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif" font-size="20" font-weight="700">입력</text>
+  <text x="120" y="346" fill="#2A211C" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif" font-size="28" font-weight="800">평수 · 공정 · 단가</text>
+
+  <rect x="360" y="268" width="252" height="108" rx="24" fill="#FDE6D9" stroke="#E4A98A" stroke-width="2"/>
+  <text x="390" y="314" fill="#A24E28" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif" font-size="20" font-weight="700">계산</text>
+  <text x="390" y="346" fill="#2A211C" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif" font-size="28" font-weight="800">예상 총액 범위 산출</text>
+
+  <rect x="662" y="268" width="252" height="108" rx="24" fill="#E6F2EA" stroke="#98C1A8" stroke-width="2"/>
+  <text x="692" y="314" fill="#2E6D4B" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif" font-size="20" font-weight="700">판정</text>
+  <text x="692" y="346" fill="#2A211C" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif" font-size="28" font-weight="800">받은 견적 비교</text>
+
+  <rect x="964" y="268" width="220" height="108" rx="24" fill="#E6EEF9" stroke="#9AB7E0" stroke-width="2"/>
+  <text x="994" y="314" fill="#315C9B" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif" font-size="20" font-weight="700">행동</text>
+  <text x="994" y="346" fill="#2A211C" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif" font-size="28" font-weight="800">질문 · 협상 준비</text>
+
+  <path d="M310 322H352" stroke="#BA9C88" stroke-width="6" stroke-linecap="round"/>
+  <path d="M602 322H654" stroke="#BA9C88" stroke-width="6" stroke-linecap="round"/>
+  <path d="M904 322H956" stroke="#BA9C88" stroke-width="6" stroke-linecap="round"/>
+  <path d="M346 306L366 322L346 338" stroke="#BA9C88" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M648 306L668 322L648 338" stroke="#BA9C88" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M950 306L970 322L950 338" stroke="#BA9C88" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <rect x="90" y="432" width="340" height="150" rx="26" fill="#FFFFFF" stroke="#E5DDD1" stroke-width="2"/>
+  <text x="120" y="478" fill="#8A5A44" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif" font-size="18" font-weight="700">STEP 1</text>
+  <text x="120" y="516" fill="#1F1A17" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif" font-size="30" font-weight="800">견적 계산</text>
+  <text x="120" y="552" fill="#5F564E" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif" font-size="22" font-weight="500">15개 공정별 자재 등급을 고르고</text>
+  <text x="120" y="582" fill="#5F564E" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif" font-size="22" font-weight="500">예상 총액과 단가 적정성을 확인</text>
+
+  <rect x="470" y="432" width="340" height="150" rx="26" fill="#FFFFFF" stroke="#E5DDD1" stroke-width="2"/>
+  <text x="500" y="478" fill="#8A5A44" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif" font-size="18" font-weight="700">STEP 2</text>
+  <text x="500" y="516" fill="#1F1A17" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif" font-size="30" font-weight="800">누락 · 시공 체크</text>
+  <text x="500" y="552" fill="#5F564E" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif" font-size="22" font-weight="500">빠지기 쉬운 공정, 현장 체크포인트,</text>
+  <text x="500" y="582" fill="#5F564E" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif" font-size="22" font-weight="500">실측 준비 항목을 한 번에 검토</text>
+
+  <rect x="850" y="432" width="340" height="150" rx="26" fill="#FFFFFF" stroke="#E5DDD1" stroke-width="2"/>
+  <text x="880" y="478" fill="#8A5A44" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif" font-size="18" font-weight="700">STEP 3</text>
+  <text x="880" y="516" fill="#1F1A17" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif" font-size="30" font-weight="800">상담 · 협상 · AI 분석</text>
+  <text x="880" y="552" fill="#5F564E" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif" font-size="22" font-weight="500">상담 질문, 협상 스크립트,</text>
+  <text x="880" y="582" fill="#5F564E" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif" font-size="22" font-weight="500">견적서 리스크 분석까지 연결</text>
+
+  <rect x="90" y="640" width="250" height="118" rx="22" fill="#FFF8F2" stroke="#E7D5C5" stroke-width="2"/>
+  <text x="120" y="686" fill="#1F1A17" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif" font-size="28" font-weight="800">상담 준비</text>
+  <text x="120" y="724" fill="#6A6058" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif" font-size="20" font-weight="500">질문 리스트 자동 정리</text>
+
+  <rect x="370" y="640" width="250" height="118" rx="22" fill="#FFF8F2" stroke="#E7D5C5" stroke-width="2"/>
+  <text x="400" y="686" fill="#1F1A17" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif" font-size="28" font-weight="800">실측 체크</text>
+  <text x="400" y="724" fill="#6A6058" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif" font-size="20" font-weight="500">방문 전 확인 항목 제공</text>
+
+  <rect x="650" y="640" width="250" height="118" rx="22" fill="#FFF8F2" stroke="#E7D5C5" stroke-width="2"/>
+  <text x="680" y="686" fill="#1F1A17" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif" font-size="28" font-weight="800">스펙 · 용어</text>
+  <text x="680" y="724" fill="#6A6058" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif" font-size="20" font-weight="500">초보자용 설명 사전</text>
+
+  <rect x="930" y="640" width="260" height="118" rx="22" fill="#FFF8F2" stroke="#E7D5C5" stroke-width="2"/>
+  <text x="960" y="686" fill="#1F1A17" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif" font-size="28" font-weight="800">AI 견적 체크</text>
+  <text x="960" y="724" fill="#6A6058" font-family="'Pretendard', 'Apple SD Gothic Neo', sans-serif" font-size="20" font-weight="500">텍스트 붙여넣기 기반 리스크 탐지</text>
+</svg>

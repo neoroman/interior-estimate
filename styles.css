@@ -1306,6 +1306,125 @@ input[type="range"] {
   line-height: 1.65;
 }
 
+.custom-checklist-panel {
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+}
+
+.custom-checklist-form {
+  display: grid;
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.custom-item-field {
+  margin-bottom: 0;
+}
+
+.custom-checklist-textarea {
+  width: 100%;
+}
+
+.custom-checklist-submit {
+  width: fit-content;
+}
+
+.custom-checklist-card {
+  padding: 18px;
+  border-radius: 20px;
+  border: 1px solid var(--line);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.8), rgba(255, 245, 238, 0.94));
+}
+
+.custom-checklist-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.custom-checklist-head h3 {
+  margin: 0;
+  font-size: 17px;
+  letter-spacing: -0.02em;
+}
+
+.custom-checklist-meta {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.custom-checklist-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(184, 92, 56, 0.1);
+  color: var(--accent-deep);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.custom-checklist-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.custom-checklist-item {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 10px;
+  align-items: start;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(95, 58, 42, 0.12);
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.custom-checklist-item input[type="checkbox"] {
+  margin-top: 3px;
+  accent-color: var(--accent);
+}
+
+.custom-checklist-item-text {
+  line-height: 1.6;
+}
+
+.custom-checklist-item.is-checked .custom-checklist-item-text {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
+.custom-checklist-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.custom-checklist-action {
+  border: 0;
+  border-radius: 999px;
+  padding: 8px 12px;
+  background: rgba(91, 56, 38, 0.08);
+  color: var(--accent-deep);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
 /* ── AI Panel ── */
 
 .ai-panel {
@@ -1634,6 +1753,7 @@ input[type="range"] {
   .process-head,
   .price-check-head,
   .hidden-check-head,
+  .custom-checklist-head,
   .spec-focus-head,
   .spec-glossary-head,
   .sim-scenario-head {
@@ -1663,6 +1783,7 @@ input[type="range"] {
 
   .meeting-report-category,
   .hidden-check-badge,
+  .custom-checklist-badge,
   .spec-badge,
   .sim-badge {
     margin-top: 8px;
