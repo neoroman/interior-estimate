@@ -52,35 +52,14 @@ python3 -m http.server 8000
 
 그 후 브라우저에서 `http://localhost:8000`으로 접속하면 됩니다.
 
-## 화면 캡처
+## 화면
+견적 계산
+![견적 계산](./assets/readme/screen-calculator.png)
 
-| 견적 계산 | 누락 체크 | AI 분석 |
-| --- | --- | --- |
-| ![견적 계산 화면](./assets/readme/screen-calculator.png) | ![누락 체크 화면](./assets/readme/screen-checklist.png) | ![AI 분석 화면](./assets/readme/screen-ai.png) |
+![스펙/용어 사전](./assets/readme/image-1.png)
 
-## README에 화면 캡처 추가하기
+![AI 견적 체크](./assets/readme/image-2.png)
 
-실제 앱 캡처 이미지를 같이 넣고 싶다면 아래 3장 구성이 가장 전달력이 좋습니다.
-
-1. 첫 화면 + 견적 계산 결과
-2. 누락 체크 또는 실측 체크 화면
-3. AI 견적 체크 또는 협상 시뮬레이터 화면
-
-권장 경로:
-
-- `assets/readme/screen-calculator.png`
-- `assets/readme/screen-checklist.png`
-- `assets/readme/screen-ai.png`
-
-이미지를 준비한 뒤 아래처럼 바로 붙일 수 있습니다.
-
-```md
-## 화면 캡처
-
-| 견적 계산 | 체크리스트 | AI 분석 |
-| --- | --- | --- |
-| ![견적 계산 화면](./assets/readme/screen-calculator.png) | ![체크리스트 화면](./assets/readme/screen-checklist.png) | ![AI 분석 화면](./assets/readme/screen-ai.png) |
-```
 
 ## AI 분석 사용
 
