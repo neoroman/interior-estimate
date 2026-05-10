@@ -1,6 +1,7 @@
 (function () {
-  const STORAGE_KEY = "anthropic_api_key";
+  const LOCAL_PROXY_URL = "http://127.0.0.1:8787";
   let activeAnalysis = null;
+  let localAiStatus = null;
 
   const DEMO_ESTIMATE = `시공 항목 내용 / 사용자재 수량 / 단위 단가 (단위: 원) 금액(단위: 원)
 
@@ -207,33 +208,24 @@ ${processLines}
 6. 총평`;
   }
 
-  async function analyzeEstimate(estimateText, apiKey, signal) {
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
+  async function analyzeEstimate(estimateText, provider, signal) {
+    const response = await fetch(`${LOCAL_PROXY_URL}/analyze`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-        "anthropic-dangerous-direct-browser-access": "true",
       },
       signal,
       body: JSON.stringify({
-        model: "claude-sonnet-4-6",
-        max_tokens: 2048,
-        stream: true,
-        system: buildSystemPrompt(),
-        messages: [
-          {
-            role: "user",
-            content: `다음 인테리어 견적서를 분석해주세요:\n\n${estimateText}`,
-          },
-        ],
+        provider,
+        estimateText,
+        systemPrompt: buildSystemPrompt(),
       }),
     });
 
     if (!response.ok) {
       const err = await response.json().catch(() => ({}));
-      throw new Error(err.error?.message || `HTTP ${response.status}`);
+      const message = typeof err.error === "string" ? err.error : err.error?.message;
+      throw new Error(message || `HTTP ${response.status}`);
     }
 
     return response.body;
@@ -259,16 +251,25 @@ ${processLines}
         if (!line.startsWith("data: ")) continue;
         const raw = line.slice(6).trim();
         if (raw === "[DONE]") continue;
+        let parsed;
         try {
-          const parsed = JSON.parse(raw);
-          if (
-            parsed.type === "content_block_delta" &&
-            parsed.delta?.type === "text_delta"
-          ) {
-            el.textContent += parsed.delta.text;
-            el.scrollTop = el.scrollHeight;
-          }
-        } catch {}
+          parsed = JSON.parse(raw);
+        } catch {
+          continue;
+        }
+        if (parsed.type === "error") {
+          throw new Error(parsed.error || "로컬 AI 분석 중 오류가 발생했습니다.");
+        }
+        if (parsed.type === "text_delta" && parsed.text) {
+          el.textContent += parsed.text;
+          el.scrollTop = el.scrollHeight;
+        } else if (
+          parsed.type === "content_block_delta" &&
+          parsed.delta?.type === "text_delta"
+        ) {
+          el.textContent += parsed.delta.text;
+          el.scrollTop = el.scrollHeight;
+        }
       }
     }
   }
@@ -328,11 +329,11 @@ ${processLines}
   }
 
   function init() {
-    const apiKeyInput = document.getElementById("api-key-input");
-    const saveKeyBtn = document.getElementById("save-key-btn");
-    const keyStatus = document.getElementById("key-status");
+    const localAiStatusEl = document.getElementById("local-ai-status");
+    const localAiHelp = document.getElementById("local-ai-help");
     const estimateTextarea = document.getElementById("estimate-text");
     const analyzeBtn = document.getElementById("analyze-btn");
+    const codexAnalyzeBtn = document.getElementById("codex-analyze-btn");
     const demoBtn = document.getElementById("demo-btn");
     const stopBtn = document.getElementById("stop-btn");
     const resultEl = document.getElementById("ai-result");
@@ -340,10 +341,59 @@ ${processLines}
     if (!analyzeBtn) return;
 
     function resetControls() {
-      analyzeBtn.disabled = false;
-      analyzeBtn.textContent = "분석하기";
+      const claudeReady = Boolean(localAiStatus?.providers?.claude?.installed && localAiStatus?.providers?.claude?.loggedIn);
+      const codexReady = Boolean(localAiStatus?.providers?.codex?.installed && localAiStatus?.providers?.codex?.loggedIn);
+      analyzeBtn.disabled = !claudeReady;
+      analyzeBtn.textContent = "내 Claude로 분석";
+      if (codexAnalyzeBtn) {
+        codexAnalyzeBtn.disabled = !codexReady;
+        codexAnalyzeBtn.textContent = "내 Codex로 분석";
+      }
       if (demoBtn) demoBtn.disabled = false;
       if (stopBtn) stopBtn.disabled = true;
+    }
+
+    function setLocalAiStatus(message, className = "") {
+      if (!localAiStatusEl) return;
+      localAiStatusEl.textContent = message;
+      localAiStatusEl.className = `key-status${className ? ` ${className}` : ""}`;
+    }
+
+    function providerReady(provider) {
+      const status = localAiStatus?.providers?.[provider];
+      return Boolean(status?.installed && status?.loggedIn);
+    }
+
+    function describeProvider(name, status) {
+      if (!status?.installed) return `${name} 미설치`;
+      if (!status?.loggedIn) return `${name} 로그인 필요`;
+      return `${name} 연결됨`;
+    }
+
+    async function refreshLocalAiStatus() {
+      try {
+        const response = await fetch(`${LOCAL_PROXY_URL}/health`, { cache: "no-store" });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        localAiStatus = await response.json();
+        const claude = describeProvider("Claude", localAiStatus.providers?.claude);
+        const codex = describeProvider("Codex", localAiStatus.providers?.codex);
+        const hasReadyProvider = providerReady("claude") || providerReady("codex");
+        setLocalAiStatus(`${claude} · ${codex}`, hasReadyProvider ? "is-saved" : "is-error");
+        if (localAiHelp) {
+          localAiHelp.innerHTML = hasReadyProvider
+            ? "로그인된 로컬 CLI로 분석합니다. 토큰은 브라우저로 전달되지 않습니다."
+            : "터미널에서 <code>npm run ai-local</code>을 실행한 뒤 <code>claude auth login</code> 또는 <code>codex login</code> 상태를 확인하세요.";
+        }
+      } catch {
+        localAiStatus = null;
+        setLocalAiStatus("로컬 프록시 연결 안 됨", "is-error");
+        if (localAiHelp) {
+          localAiHelp.innerHTML =
+            "터미널에서 <code>npm run ai-local</code>을 실행하면 로그인된 Claude/Codex로 분석할 수 있습니다.";
+        }
+      } finally {
+        resetControls();
+      }
     }
 
     function stopActiveAnalysis(message = "분석이 중단되었습니다. 내용을 수정한 뒤 다시 분석할 수 있습니다.") {
@@ -354,24 +404,6 @@ ${processLines}
       resultEl.textContent = message;
       resultEl.className = "ai-result is-error";
       resetControls();
-    }
-
-    // restore saved key
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved && apiKeyInput) {
-      apiKeyInput.value = saved;
-      keyStatus.textContent = "저장된 키 있음 ✓";
-      keyStatus.className = "key-status is-saved";
-    }
-
-    if (saveKeyBtn) {
-      saveKeyBtn.addEventListener("click", () => {
-        const key = apiKeyInput.value.trim();
-        if (!key) return;
-        localStorage.setItem(STORAGE_KEY, key);
-        keyStatus.textContent = "저장됨 ✓";
-        keyStatus.className = "key-status is-saved";
-      });
     }
 
     // demo mode
@@ -387,6 +419,7 @@ ${processLines}
         demoBtn.disabled = true;
         analyzeBtn.disabled = true;
         analyzeBtn.textContent = "분석 중…";
+        if (codexAnalyzeBtn) codexAnalyzeBtn.disabled = true;
         if (stopBtn) stopBtn.disabled = false;
         resultEl.textContent = "";
         resultEl.className = "ai-result is-loading";
@@ -411,15 +444,14 @@ ${processLines}
       });
     }
 
-    // real API mode
-    analyzeBtn.addEventListener("click", async () => {
-      const apiKey =
-        localStorage.getItem(STORAGE_KEY) || (apiKeyInput ? apiKeyInput.value.trim() : "");
+    async function runLocalAnalysis(provider) {
       const text = estimateTextarea.value.trim();
 
-      if (!apiKey) {
-        resultEl.textContent = "API 키를 먼저 입력하고 저장해주세요. 또는 '데모 체험하기'를 눌러보세요.";
+      if (!providerReady(provider)) {
+        resultEl.textContent =
+          "로컬 AI가 연결되어 있지 않습니다. 터미널에서 npm run ai-local을 실행하고 Claude/Codex 로그인을 확인해주세요.";
         resultEl.className = "ai-result is-error";
+        refreshLocalAiStatus();
         return;
       }
       if (!text) {
@@ -432,17 +464,23 @@ ${processLines}
         activeAnalysis.controller.abort();
       }
       const controller = new AbortController();
-      activeAnalysis = { controller, mode: "api" };
+      activeAnalysis = { controller, mode: provider };
 
       analyzeBtn.disabled = true;
-      analyzeBtn.textContent = "분석 중…";
+      analyzeBtn.textContent = provider === "claude" ? "Claude 분석 중…" : "분석 중…";
+      if (codexAnalyzeBtn) {
+        codexAnalyzeBtn.disabled = true;
+        codexAnalyzeBtn.textContent = provider === "codex" ? "Codex 분석 중…" : "내 Codex로 분석";
+      }
       if (demoBtn) demoBtn.disabled = true;
       if (stopBtn) stopBtn.disabled = false;
       resultEl.textContent = "";
       resultEl.className = "ai-result is-loading";
+      resultEl.textContent = "로컬 AI에 분석을 요청하는 중입니다...\n";
 
       try {
-        const stream = await analyzeEstimate(text, apiKey, controller.signal);
+        const stream = await analyzeEstimate(text, provider, controller.signal);
+        resultEl.textContent = "";
         resultEl.className = "ai-result";
         await streamToElement(stream, resultEl, controller.signal);
       } catch (err) {
@@ -458,13 +496,20 @@ ${processLines}
         }
         resetControls();
       }
-    });
+    }
+
+    analyzeBtn.addEventListener("click", () => runLocalAnalysis("claude"));
+    if (codexAnalyzeBtn) {
+      codexAnalyzeBtn.addEventListener("click", () => runLocalAnalysis("codex"));
+    }
 
     if (stopBtn) {
       stopBtn.addEventListener("click", () => {
         stopActiveAnalysis();
       });
     }
+
+    refreshLocalAiStatus();
   }
 
   if (document.readyState === "loading") {

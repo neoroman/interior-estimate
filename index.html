@@ -642,19 +642,16 @@
             </p>
           </div>
 
-          <div class="api-key-row">
-            <label for="api-key-input" class="api-key-label">Anthropic API 키</label>
-            <div class="api-key-field">
-              <input
-                id="api-key-input"
-                type="password"
-                placeholder="sk-ant-..."
-                autocomplete="off"
-              />
-              <button id="save-key-btn" type="button" class="save-key-btn">저장</button>
+          <div class="local-ai-row">
+            <div class="local-ai-head">
+              <div>
+                <p class="api-key-label">로컬 AI 연결</p>
+                <p id="local-ai-help" class="field-note">
+                  터미널에서 <code>npm run ai-local</code>을 실행하면 로그인된 Claude/Codex로 분석할 수 있습니다.
+                </p>
+              </div>
+              <span id="local-ai-status" class="key-status">연결 확인 중...</span>
             </div>
-            <span id="key-status" class="key-status"></span>
-            <p class="field-note">키는 이 기기의 브라우저에만 저장됩니다. 서버로 전송되지 않습니다.</p>
           </div>
 
           <div class="field">
@@ -668,8 +665,9 @@
           </div>
 
           <div class="analyze-row">
-            <button id="demo-btn" type="button" class="demo-btn">⚡ 데모 체험하기</button>
-            <button id="analyze-btn" type="button" class="analyze-btn">분석하기</button>
+            <button id="demo-btn" type="button" class="demo-btn">데모 체험하기</button>
+            <button id="analyze-btn" type="button" class="analyze-btn" disabled>내 Claude로 분석</button>
+            <button id="codex-analyze-btn" type="button" class="analyze-btn secondary" disabled>내 Codex로 분석</button>
             <button id="stop-btn" type="button" class="stop-btn" disabled>중단하기</button>
           </div>
 

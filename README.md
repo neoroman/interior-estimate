@@ -24,7 +24,7 @@
 - 보급형 / 표준형 / 고급형 등급별 예상 견적 범위 계산
 - 받은 평당 단가와 기준 범위 비교
 - 누락 가능 항목 및 상담 질문 체크리스트 제공
-- Anthropic API를 이용한 견적서 텍스트 리스크 분석
+- 로컬 Claude/Codex 구독 세션을 이용한 견적서 텍스트 리스크 분석
 - 발표용 자료 `decks/interier-hackathon/` 포함
 
 ## 파일 구성
@@ -33,7 +33,8 @@
 - `styles.css`: 전체 스타일
 - `prices.js`: 공정별 기준 단가, 포함/제외 범위, 질문 데이터
 - `grade-decoder.js`: 계산기와 체크리스트 동작 로직
-- `ai-analyzer.js`: Anthropic API 연동 및 견적서 분석 로직
+- `ai-analyzer.js`: 로컬 AI 프록시 연동 및 견적서 분석 로직
+- `scripts/ai-local-proxy.js`: 로그인된 Claude/Codex CLI를 호출하는 로컬 프록시
 - `decks/interier-hackathon/`: 발표 슬라이드와 PDF
 
 ## 실행 방법
@@ -63,9 +64,12 @@ python3 -m http.server 8000
 
 ## AI 분석 사용
 
-- `STEP 4 · AI` 영역에 Anthropic API 키를 입력해 저장합니다.
+- Claude 또는 Codex CLI에 먼저 로그인합니다.
+- 터미널에서 `npm run ai-local`을 실행합니다.
+- 앱의 `AI 견적 체크` 영역에서 `내 Claude로 분석` 또는 `내 Codex로 분석`을 누릅니다.
 - 받은 견적서 텍스트를 붙여넣고 분석을 실행합니다.
 - 분석 결과는 가격 이상, 범위 모호, 누락 항목, 협상 포인트 중심으로 정리됩니다.
+- API 키는 브라우저에 저장하지 않습니다. 로컬 프록시가 이 기기에 로그인된 CLI만 호출합니다.
 
 ## 참고
 
