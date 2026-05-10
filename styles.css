@@ -1432,9 +1432,25 @@ input[type="range"] {
   gap: 20px;
 }
 
-.api-key-row {
+.api-key-row,
+.local-ai-row {
   display: grid;
   gap: 8px;
+}
+
+.local-ai-row {
+  padding: 16px;
+  border: 1px solid rgba(95, 58, 42, 0.16);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.58);
+}
+
+.local-ai-head {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
 }
 
 .api-key-label {
@@ -1484,6 +1500,11 @@ input[type="range"] {
 
 .key-status.is-saved {
   color: #1f7b46;
+  font-weight: 700;
+}
+
+.key-status.is-error {
+  color: #b84320;
   font-weight: 700;
 }
 
@@ -1598,6 +1619,16 @@ input[type="range"] {
 .analyze-btn:disabled {
   opacity: 0.6;
   cursor: default;
+}
+
+.analyze-btn.secondary {
+  color: var(--accent-deep);
+  background: rgba(184, 92, 56, 0.1);
+  box-shadow: none;
+}
+
+.analyze-btn.secondary:hover:not(:disabled) {
+  box-shadow: none;
 }
 
 .ai-result {

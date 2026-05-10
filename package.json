@@ -1,4 +1,7 @@
 {
+  "scripts": {
+    "ai-local": "node scripts/ai-local-proxy.js"
+  },
   "dependencies": {
     "slides-grab": "^1.2.6"
   }
