@@ -59,8 +59,7 @@ python3 -m http.server 8000
 
 ![스펙/용어 사전](./assets/readme/image-1.png)
 
-![AI 견적 체크](./assets/readme/image-2.png)
-
+![AI 견적 체크](./assets/readme/image-3.png)
 
 ## AI 분석 사용
 
@@ -75,3 +74,15 @@ python3 -m http.server 8000
 
 - 본 프로젝트의 계산 결과는 참고용 추정치입니다.
 - 실제 견적은 현장 조건, 브랜드, 시공 범위, 지역, 철거 상태 등에 따라 달라질 수 있습니다.
+
+## GitHub 협업 설정
+
+이 저장소는 기본적으로 모든 파일의 `CODEOWNER`를 `@qpyu66`로 지정합니다. GitHub 저장소에서 브랜치 보호 규칙을 함께 켜면 아래처럼 운영할 수 있습니다.
+
+1. `Settings` > `Branches` > `Branch protection rules`에서 `main` 규칙을 추가합니다.
+2. `Require a pull request before merging`를 켭니다.
+3. `Require approvals`를 1 이상으로 설정합니다.
+4. `Require review from Code Owners`를 켭니다.
+5. 필요하면 `Restrict who can push to matching branches`도 켭니다.
+
+이렇게 하면 다른 사람은 `main`에 바로 push하기 어렵고, PR에는 자동으로 `@qpyu66` 리뷰 요청이 붙습니다. 단, `main` 직접 push 차단은 GitHub 저장소 설정에서만 완전히 강제됩니다.
