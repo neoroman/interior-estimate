@@ -78,6 +78,16 @@
     : [];
   let customChecklists = loadCustomChecklists();
 
+  function track(name, data) {
+    window.va?.('event', { name, data });
+  }
+
+  let _trackTimer = null;
+  function trackDebounced(name, data, delay = 1500) {
+    clearTimeout(_trackTimer);
+    _trackTimer = setTimeout(() => track(name, data), delay);
+  }
+
   function formatWon(value) {
     return `${Math.round(value).toLocaleString("ko-KR")}원`;
   }
@@ -183,6 +193,10 @@
       window.localStorage.setItem(MENU_TAB_STORAGE_KEY, nextTab);
     } catch (error) {
       // Ignore storage failures in private mode or embedded browsers.
+    }
+
+    if (focus) {
+      track('tab_view', { tab: nextTab });
     }
   }
 
@@ -1181,20 +1195,23 @@
         toggleGroup.appendChild(button);
       });
 
-      const meta = document.createElement("div");
-      meta.className = "process-meta";
+      const meta = document.createElement("details");
+      meta.className = "process-details";
       meta.innerHTML = `
-        <p><strong>등급 기준</strong> ${activeGrade.label} · ${activeGrade.material}</p>
-        <p><strong>세부 기준</strong> ${getReferenceLabel(activeReference)} / ${activeReference.spec}</p>
-        <p><strong>선택 범위</strong> ${formatWon(activeReference.priceMin)} ~ ${formatWon(activeReference.priceMax)} / 평</p>
-        <p><strong>총액 영향</strong> <span class="impact-copy">${getImpactCopy(
-          processName
-        )}</span></p>
-        <p><strong>규격 요약</strong> ${activeReference.specSummary}</p>
-        <p><strong>출처</strong> ${getSourceMarkup(activeReference)}</p>
-        <p><strong>메모</strong> ${activeReference.note}</p>
-        <p><strong>포함</strong> ${activeGrade.includes}</p>
-        <p><strong>제외</strong> ${activeGrade.excludes}</p>
+        <summary>세부 기준과 포함/제외 보기</summary>
+        <div class="process-meta">
+          <p><strong>등급 기준</strong> ${activeGrade.label} · ${activeGrade.material}</p>
+          <p><strong>세부 기준</strong> ${getReferenceLabel(activeReference)} / ${activeReference.spec}</p>
+          <p><strong>선택 범위</strong> ${formatWon(activeReference.priceMin)} ~ ${formatWon(activeReference.priceMax)} / 평</p>
+          <p><strong>총액 영향</strong> <span class="impact-copy">${getImpactCopy(
+            processName
+          )}</span></p>
+          <p><strong>규격 요약</strong> ${activeReference.specSummary}</p>
+          <p><strong>출처</strong> ${getSourceMarkup(activeReference)}</p>
+          <p><strong>메모</strong> ${activeReference.note}</p>
+          <p><strong>포함</strong> ${activeGrade.includes}</p>
+          <p><strong>제외</strong> ${activeGrade.excludes}</p>
+        </div>
       `;
 
       const referencePicker = document.createElement("div");
@@ -2109,6 +2126,16 @@
     updateTotalVerdict(result.verdict);
     renderMeetingReport();
     renderNegotiationSimulator();
+
+    if (result.verdict) {
+      trackDebounced('verdict_shown', {
+        pyeong,
+        verdict: result.verdict,
+        processes: activeCount,
+      });
+    } else {
+      trackDebounced('estimate_calculated', { pyeong, processes: activeCount });
+    }
   }
 
   function renderMeetingReport() {

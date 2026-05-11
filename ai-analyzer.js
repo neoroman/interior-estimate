@@ -406,9 +406,15 @@ ${processLines}
       resetControls();
     }
 
+    function track(name, data) {
+      window.va?.('event', { name, data });
+    }
+
+
     // demo mode
     if (demoBtn) {
       demoBtn.addEventListener("click", async () => {
+        track('ai_demo_started', {});
         if (activeAnalysis?.controller) {
           activeAnalysis.controller.abort();
         }
@@ -465,6 +471,7 @@ ${processLines}
       }
       const controller = new AbortController();
       activeAnalysis = { controller, mode: provider };
+      track('ai_analysis_started', { text_length: text.length });
 
       analyzeBtn.disabled = true;
       analyzeBtn.textContent = provider === "claude" ? "Claude 분석 중…" : "분석 중…";

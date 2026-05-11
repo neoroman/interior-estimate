@@ -1,10 +1,10 @@
-const CACHE_NAME = 'gyeonjeokbom-v1';
+const CACHE_NAME = 'gyeonjeokbom-v2';
 
 const PRECACHE_URLS = [
   '/',
   '/index.html',
   '/styles.css',
-  '/grades-decoder.js',
+  '/grade-decoder.js',
   '/prices.js',
   '/ai-analyzer.js',
   '/construction-checklist-data.js',
